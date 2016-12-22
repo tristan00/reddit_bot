@@ -62,6 +62,7 @@ class bot:
         while True:
             time.sleep(5)
             try:
+                print(self.user, self.password)
                 login_data = {'api_type':'json','op':'login','passwd':self.password,'user':self.user}
                 login_url = 'https://www.reddit.com/api/login/d{0}'.format(self.user)
                 r = self.session.post(login_url, data = login_data)
@@ -85,10 +86,10 @@ class bot:
             r = s.get(url)
             soups = BeautifulSoup(r.text,"html.parser")
             print(r.text)
-
+            write_to_file('test', r.text)
             subreddit_data = subreddit(sub_name)
 
-            print('number of posts: ', len(soups.find('div',{'class':'sitetable linklisting'}).find_all('div',{'data-subreddit':sub_name})))
+            print('number of posts: ', len(soups.find('div',{'class':'siteTable linklisting'}).find_all('div',{'data-subreddit':sub_name})))
 
             for soup in soups.find('div',{'class':'sitetable linklisting'}).find_all('div',{'data-subreddit':sub_name}):
                 title = ' '.join(soup.find('p', {'class':'title'}).text.split())
@@ -175,7 +176,7 @@ def create_bots():
     print(1)
     for r in rs:
         print(r)
-        creds[r[0]] = {'user_name':r[1], 'password':r[2]}
+        creds[r[0]] = {'user_name':r[2], 'password':r[1]}
     conn.close()
 
     global bots
@@ -184,6 +185,7 @@ def create_bots():
         bots.append(bot(i, creds[i]['user_name'], creds[i]['password']))
 
     for b in bots:
+        print(b, ' login')
         b.login()
 
 def get_word_weighting():
