@@ -66,7 +66,7 @@ class bot:
                 login_url = 'https://www.reddit.com/api/login/d{0}'.format(self.user)
                 r = self.session.post(login_url, data = login_data)
                 r = self.session.get('https://www.reddit.com')
-                write_to_file(self.user, r.text)
+                #write_to_file(self.user, r.text)
                 break
             except:
                 self.session = get_session()
@@ -186,17 +186,6 @@ def create_bots():
     for b in bots:
         b.login()
 
-def createbot1():
-    global creds
-    creds['bot2'] = {'user_name':'hildawg69', 'password': 'Working1'}
-
-    global bots
-    for i in creds.keys():
-        bots.append(bot(i, creds[i]['user_name'], creds[i]['password']))
-
-    for b in bots:
-        b.login()
-
 def get_word_weighting():
     global rankings
     conn = sqlite3.connect('reddit.db')
@@ -260,7 +249,7 @@ def getProxylist():
     return proxy_list
 
 def get_session():
-    proxy = random.choice(getProxylist())
+    proxy = random.choice(p_list)
     s = requests.Session()
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
     s.proxies = proxy
@@ -274,6 +263,8 @@ def write_to_file(user, r_text):
     f.close()
 
 def main():
+    global p_list
+    p_list = getProxylist()
     get_word_weighting()
     create_bots()
 
