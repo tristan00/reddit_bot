@@ -5,6 +5,9 @@ from bs4 import BeautifulSoup
 import traceback
 import sqlite3
 import time
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+
 
 main_bot = None
 creds = []
@@ -13,8 +16,6 @@ bots = []
 
 #put in db
 rankings = {}
-
-class
 
 class post:
     def __init__(self, pid, data_url, comment_url, date_created, data_fullname, subreddit, title, score):
@@ -59,6 +60,7 @@ class bot:
         self.session = get_session()
         self.sub = None
         self.uh = None
+        self.driver = webdriver.Chrome()
 
     def login(self):
         try_counter = 3
@@ -67,7 +69,9 @@ class bot:
                 return 1
             try:
                 print(self.user, self.password)
-                login_data = {'api_type':'json','op':'login','passwd':self.password,'user':self.user}
+                #login_data = {'api_type':'json','op':'login','passwd':self.password,'user':self.user}
+
+                login_data = {'api_type':'json','op':'login','passwd':self.password,'user':"dirty_cheeser"}
                 login_url = 'https://www.reddit.com/api/login/d{0}'.format(self.user)
                 r = self.session.post(login_url, data = login_data)
                 time.sleep(1)
@@ -87,14 +91,13 @@ class bot:
         r = self.session.get('https://www.reddit.com')
         soup = BeautifulSoup(r.text, "html.parser")
         #self.uh = soup.find('input',{'name':'uh', 'type':'hidden'})['value']
-        if (self.user in r.text):
+        if ((self.user in r.text) or ("dirty_cheeser" in r.text)):
             return 1
         else:
             return 0
 
-
     def post(self, subreddit, text, comment_page_url, parent_comment_id):
-        login_url = 'https://www.reddit.com/api/comment'
+        login_url = 'https://www.reddit.com/api/comment/'
 
         #read_url
         r = self.session.get(comment_page_url)
@@ -115,6 +118,41 @@ class bot:
         print(post_data)
         print(r.status_code)
 
+
+    #temporary
+
+    def post_comment(self, parent_url, text):
+        self.login_driver()
+        self.post_driver(text, parent_url)
+        self.log_of_and_quit()
+
+    def login_driver(self):
+        self.driver.get('https://www.reddit.com/login')
+        self.driver.find_element_by_id('user_login').send_keys(self.user)
+        time.sleep(.5)
+        self.driver.find_element_by_id('passwd_login').send_keys(self.password)
+        time.sleep(.5)
+        self.driver.find_element_by_id('passwd_login').send_keys(Keys.ENTER)
+        time.sleep(1)
+
+    def post_driver(self, text, parent_comment_url):
+        thing_id = '#thing_t1_' + parent_comment_url.split('/')[-2]
+        c_id = '#commentreply_t1_' + parent_comment_url.split('/')[-2]
+        self.driver.get(parent_comment_url)
+        '#thing_t1_dnuhvyu > div.entry.unvoted > ul > li.reply-button > a'
+        self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button > a').click()
+        time.sleep(2)
+        self.driver.find_element_by_css_selector(c_id + ' > div > div.md > textarea').send_keys(text)
+        time.sleep(2)
+        self.driver.find_element_by_css_selector(c_id + ' > div > div.bottom-area > div > button.save').click()
+        time.sleep(2)
+
+    def log_of_and_quit(self):
+        self.driver.find_element_by_css_selector('#header-bottom-right > form > a').click()
+        self.driver.quit()
+
+
+
 def create_bots():
     global creds
     global main_bot
@@ -133,13 +171,6 @@ def create_bots():
         main_bot = bot(i, i['user_name'], i['password'])
         bots.append(main_bot)
 
-    for b in bots:
-        print(b, ' attempting login')
-        if (b.login() == 1):
-            print('login succesful')
-        else:
-            print('login failure')
-
 def get_session():
     s = requests.Session()
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
@@ -148,8 +179,6 @@ def get_session():
 def main():
     global main_bot
     create_bots()
-    main_bot.post('howdoesredditwork', 'test45', 'https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/','dnufyvt')
-
-
+    main_bot.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnuhvyu/', 'test9')
 
 main()
