@@ -7,7 +7,6 @@ import sqlite3
 import time
 
 bots = []
-p_list = []
 creds = {}
 sql_file = 'reddit_db.sqlite'
 
@@ -197,65 +196,10 @@ def get_word_weighting():
         rankings[r[0]] = r[1]
     conn.close()
 
-#proxies
-def getProxylist():
-    proxy_url = 'https://panel.limeproxies.com/client-api/get-json.php?user=user-19084&key=58c726ad62def9e2783f278dc6ef0d12e8cd2e46'
-    gp_url = 'http://ghostproxies.com/proxies/api/dhhua.json'
-    proxy_list = []
-    error_list = []
-    counter = 0
-
-    global p_list
-
-    try:
-        response = requests.get(proxy_url).text
-        response_json = json.loads(response)
-
-        print('lime count:', len(response_json[0]['proxy_list']))
-
-        for proxy in response_json[0]['proxy_list']:
-            continue
-            prox_str1 = 'https://user-19084:Working1@' + proxy['proxy'] +'/'
-            prox_str2 = 'http://user-19084:Working1@' + proxy['proxy'] +'/'
-            proxy_dict = {'https':prox_str1, 'http':prox_str2}
-            proxy_list.append(proxy_dict)
-            p_list.append(proxy_dict)
-
-    except:
-        #pass
-        traceback.print_exc()
-
-    try:
-        gp_resp = requests.get(gp_url).text
-        gp_json = json.loads(gp_resp)
-
-        print('ghost count:', len(gp_json['proxies']))
-
-        for proxy in gp_json['proxies']:
-            prox_str1 = 'https://102415dan:dan123@' + proxy['ip'] + ':' + proxy['port']
-            prox_str2 = 'http://102415dan:dan123@' + proxy['ip'] + ':' + proxy['port']
-            proxy_dict = {'https':prox_str1, 'http':prox_str2}
-            proxy_list.append(proxy_dict)
-            p_list.append(proxy_dict)
-
-    except:
-        pass
-        #traceback.print_exc()
-
-    print('number of proxies: ', len(proxy_list))
-
-    if len(proxy_list) is 0:
-        raise Exception('no working proxies')
-
-    print('number of proxies: ', len(proxy_list))
-    return proxy_list
 
 def get_session():
-    proxy = random.choice(p_list)
     s = requests.Session()
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
-    s.proxies = proxy
-    print(s.proxies)
     return s
 
 def write_to_file(user, r_text):
@@ -266,7 +210,6 @@ def write_to_file(user, r_text):
 
 def main():
     global p_list
-    p_list = getProxylist()
     get_word_weighting()
     create_bots()
 
