@@ -1,11 +1,9 @@
 import sqlite3
-creds = {'trump':1,
-         'eu4':5}
-
 
 conn = sqlite3.connect('reddit.db')
 
 c = conn.cursor()
+creds = ('dataphobes','SVUhgJCTZrPBeN2U')
 
 c.execute('drop TABLE key_words')
 c.execute('CREATE TABLE key_words (word text, value integer)')
