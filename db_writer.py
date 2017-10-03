@@ -3,17 +3,16 @@ import sqlite3
 conn = sqlite3.connect('reddit.db')
 
 c = conn.cursor()
+cred_list = []
 creds = ('dataphobes','SVUhgJCTZrPBeN2U')
+cred_list.append(creds)
 
-c.execute('drop TABLE key_words')
-c.execute('CREATE TABLE key_words (word text, value integer)')
+c.execute('drop TABLE reddit_logins')
+c.execute('CREATE TABLE reddit_logins (user_name text, password integer)')
 
-for i in creds.keys():
-    print([i, creds[i]])
-    c.execute('insert into key_words values (?, ?)', [i, creds[i]])
+for i in cred_list:
+    c.execute('insert into reddit_logins values (?, ?)', [i[0], i[1]])
 conn.commit()
-rs = c.execute('select * from key_words').fetchall()
-for r in rs:
-    print(r)
+
 
 

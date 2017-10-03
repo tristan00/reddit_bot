@@ -6,7 +6,7 @@ import traceback
 import sqlite3
 import time
 
-bots = []
+bot = None
 creds = {}
 sql_file = 'reddit_db.sqlite'
 
@@ -72,100 +72,6 @@ class bot:
                 self.session = get_session()
                 traceback.print_exc()
 
-    def upvote_post(self, post):
-        self.session.post('https://www.reddit.com/api/vote?dir={0}&id={1}&sr={2}'.format(1, post.data_fullname, post.subreddit))
-
-    def downvote_post(self, post):
-        self.session.post('https://www.reddit.com/api/vote?dir={0}&id={1}&sr={2}'.format(-1, post.data_fullname, post.subreddit))
-
-    def read_subreddit(self, sub_name):
-        try:
-            url = 'https://www.reddit.com/r/{0}/new/'.format(sub_name)
-            s = self.session
-            r = s.get(url)
-            soups = BeautifulSoup(r.text,"html.parser")
-            print(r.text)
-            write_to_file('test', r.text)
-            subreddit_data = subreddit(sub_name)
-
-            print('number of posts: ', len(soups.find('div',{'class':'siteTable linklisting'}).find_all('div',{'data-subreddit':sub_name})))
-
-            for soup in soups.find('div',{'class':'sitetable linklisting'}).find_all('div',{'data-subreddit':sub_name}):
-                title = ' '.join(soup.find('p', {'class':'title'}).text.split())
-                data_fullname = soup['data-fullname']
-                pid = soup['id']
-                data_url = soup['data-url']
-                comment_soup = list(soup.find('ul', {'class':'flat-list buttons'}).find_all('li'))[0]
-                comment_url = comment_soup.find('a')['href']
-                try:
-                    score = int(soup.find('div', {'class':'score unvoted'}).text)
-                except:
-                    score = None
-                print('read: ', pid, data_url, comment_url, None, data_fullname, sub_name, title,score)
-                subreddit_data.posts.append(post(pid, data_url, comment_url, None, data_fullname, sub_name, title,score))
-                #pid, data_url, comment_url, date_created, data_fullname, subreddit)
-
-            self.sub = subreddit_data.posts
-        except:
-            traceback.print_exc()
-
-    def vote(self):
-        posts = {}
-        min_points = 0
-        max_points= 0
-
-        print(len(self.sub))
-        for p in self.sub:
-            points = 0
-            for k in rankings.keys():
-                if k in p.title.lower():
-                    points += rankings[k]
-            if min_points > points:
-                min_points = points
-            if max_points < points:
-                max_points = points
-            posts[p] = points
-            print(points, p.title)
-
-        print('')
-
-        print('')
-        max_score = 0
-        print('max')
-        for p in posts.keys():
-            if posts[p] == max_points:
-                print(posts[p], p.score, p.title)
-                if p.score is not None and max_score < p.score:
-                    max_score = p.score
-
-        for p in posts.keys():
-            if max_score == p.score and posts[p] == max_points:
-                if random.randint(0,max_score) < random.randint(0,p.score):
-                    self.upvote_post(p)
-                    print('upvoted: ', posts[p], p.score, p.title)
-                    time.sleep(5)
-
-        max_score = 1000
-        print('')
-        print('min')
-        for p in posts.keys():
-            if posts[p] == min_points:
-                print(posts[p],p.score,  p.title)
-                if p.score is not None and max_score > p.score:
-                    max_score = p.score
-
-        for p in posts.keys():
-            if max_score == p.score and posts[p] == min_points:
-                print(len(bots))
-                if random.randint(0,max_score) < random.randint(0,p.score):
-                    self.downvote_post(p)
-                    print('downvoted: ', posts[p], p.score, p.title)
-                    time.sleep(5)
-
-    def execute_strategy1(self, sub, num):
-        self.read_subreddit(sub)
-        time.sleep(3)
-        self.vote()
 
 def create_bots():
     global creds
