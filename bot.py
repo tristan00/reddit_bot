@@ -1,8 +1,10 @@
 #to do
-#switch data analysis to panda
 #add parent pointer in comment data
-#add strategy pickiung functionalioty
 #add reporting functionlity
+#implement soluition 1
+#switch data analysis to panda
+#add strategy picking functionalioty
+
 
 
 import requests
@@ -21,6 +23,9 @@ main_bot = None
 creds = []
 sql_file = 'reddit_db.sqlite'
 bots = []
+
+
+subreddits = ['dota2', 'worldnews', 'gonewild', 'nsfw', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'NSFW_GIF', 'news']
 
 class reader():
     def __init__(self, subreddit, session):
@@ -44,7 +49,7 @@ class reader():
             pass
 
         cursor.execute('create table if not exists {0} (subreddit TEXT, post_id TEXT UNIQUE, post_title TEXT, timestamp TEXT, data_permalink TEXT, comment_count int, upvotes int)'.format('posts'))
-        cursor.execute('create table if not exists {0} (post_id TEXT, comment_id TEXT PRIMARY KEY, timestamp TEXT, text TEXT, upvotes int)'.format('comment'))
+        cursor.execute('create table if not exists {0} (post_id TEXT, comment_id TEXT PRIMARY KEY, parent_id TEXT, timestamp TEXT, text TEXT, upvotes int)'.format('comment'))
 
         conn.commit()
         conn.close()
@@ -61,8 +66,8 @@ class reader():
         print(len(posts))
         for p in posts:
             try:
-                conn.execute('insert into posts values(?,?,?,?,?,?,?)', (self.name ,p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], p['data-comments-count'], p['data-score']) )
-                print('Inserted post:', p['data-fullname'], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], p['data-comments-count'], p['data-score'])
+                conn.execute('insert into posts values(?,?,?,?,?,?,?)', (self.name ,p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], 0, 0) )
+                print('Inserted post:', p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
             except:
                 pass
         conn.commit()
@@ -77,10 +82,31 @@ class reader():
         for p in res:
             time.sleep(3)
             #print(p)
+
             try:
                 r = self.session.get('https://www.reddit.com' + p[0])
                 soup = BeautifulSoup(r.text, "html.parser")
+
+                #print('https://www.reddit.com' + p[0])
+                #print('comments',soup.find('a',{'data-event-action':'comments'}).text.replace(',','').split(' ')[0])
+                #print('points',soup.find('span',{'class':'number'}).text.replace(',',''))
+
+
+
+                comment_count = soup.find('a',{'data-event-action':'comments'}).text.replace(',','').split(' ')[0]
+                upvotes = soup.find('span',{'class':'number'}).text.replace(',','')
+
+                try:
+                    temp = int(comment_count) + int(upvotes)
+                except:
+                    continue
+
+                conn.execute('update posts set upvotes = ? where post_id = ?', (upvotes, p[1],))
+                conn.execute('update posts set comment_count = ? where post_id = ?', (comment_count, p[1],))
+
                 comments = soup.find_all('div', {'class': re.compile("entry unvoted.*")})
+
+
                 for c in comments:
                     try:
                         time_str = c.find('time')['datetime']
@@ -88,8 +114,13 @@ class reader():
                         comment_upvotes = c.find('span',{'class':'score unvoted'})['title']
                         comment_text = c.find('div', {'class':'md'}).text
                         comment_id = c.find('input', {'name':'thing_id'})['value']
-                        conn.execute('insert into comment values(?,?,?,?, ?)', (p[1].split('_')[0], comment_id.split('_')[1],comment_date.timestamp(), comment_text,  comment_upvotes))
-                        print('inserted comment:', (p[1].split('_')[0], comment_id.split('_')[1],comment_date.timestamp(), comment_text,  comment_upvotes))
+                        try:
+                            parent_id = c.find('a',{'data-event-action':'parent'})['href'].replace('#','')
+                        except:
+                            parent_id = None
+
+                        conn.execute('insert into comment values(?,?,?,?, ?)', (p[1].split('_')[0], comment_id.split('_')[1], parent_id,comment_date.timestamp(), comment_text,  comment_upvotes))
+                        print('inserted comment:', (p[1].split('_')[0], comment_id.split('_')[1], parent_id,comment_date.timestamp(), comment_text,  comment_upvotes))
                         conn.commit()
 
                     except:
@@ -109,29 +140,42 @@ class reader():
         res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
 
         for r in res:
-            r.replace(r'\n','.')
-            sentences = re.split('[.!?]*',r[2])
+            text_post = r[2].replace(r'\n','.')
+            sentences = re.split('[.!?]*',text_post)
 
             sentences2 = []
             for s in sentences:
                 if len(s) >1:
                     sentences2.append(s)
 
-            if self.sentence_count_dict[len(sentences2)] in self.sentence_count_dict.keys():
+            if len(sentences2) in self.sentence_count_dict.keys():
                 self.sentence_count_dict[len(sentences)] = (self.sentence_count_dict[len(sentences2)][0] + 1, self.sentence_count_dict[len(sentences2)][1] + int(r[3]), None)
+            else:
+                self.sentence_count_dict[len(sentences)] = ( 1,  int(r[3]), None)
 
             for s in sentences2:
                 normalized_sentence = s.lower()
-                if self.sentence_dict[normalized_sentence] in self.sentence_dict.keys():
+                if normalized_sentence in self.sentence_dict.keys():
                     self.sentence_dict[normalized_sentence] = (self.sentence_dict[normalized_sentence][0] + 1, self.sentence_dict[normalized_sentence][1] + int(r[3]), None)
+                else:
+                    self.sentence_dict[normalized_sentence] = ( 1, int(r[3]), None)
+
 
         max_average = 0
         for i in self.sentence_dict.keys():
             self.sentence_dict[i] = (self.sentence_dict[i][0],self.sentence_dict[i][1],self.sentence_dict[i][1]/self.sentence_dict[i][0])
-            if(max_average < self.sentence_dict[i][2]):
+            if(max_average < self.sentence_dict[i][2] and self.sentence_dict[i][0] > 5):
                 max_average = self.sentence_dict[i][2]
                 print(i, self.sentence_dict[i])
 
+    def strategy1(self):
+        pass
+        #pick post, new post with high upvotes
+        r = self.session.get('https://www.reddit.com/r/{0}/'.format(self.name))
+
+        #pick comment, one with highest upvotes
+        #run dict maker only accepting sentences that share words with title and/or post
+        #put optimal number of sentences and post it as response
 
     def pick_strategy(self):
         pass
@@ -265,7 +309,7 @@ def main():
     global main_bot
     create_bots()
     main_bot.login()
-    main_reader = reader('worldnews', main_bot.session)
+    main_reader = reader('me_irl', main_bot.session)
 
 
     #main_reader.write_posts_and_comments_to_db()
