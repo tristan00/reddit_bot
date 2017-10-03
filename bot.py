@@ -7,9 +7,9 @@ import sqlite3
 import time
 
 bot = None
-creds = {}
+creds = []
 sql_file = 'reddit_db.sqlite'
-
+bots = []
 
 #put in db
 rankings = {}
@@ -58,19 +58,28 @@ class bot:
         self.sub = None
 
     def login(self):
-        while True:
+        try_counter = 3
+        while try_counter >0:
             time.sleep(5)
             try:
                 print(self.user, self.password)
                 login_data = {'api_type':'json','op':'login','passwd':self.password,'user':self.user}
                 login_url = 'https://www.reddit.com/api/login/d{0}'.format(self.user)
                 r = self.session.post(login_url, data = login_data)
+                time.sleep(1)
                 r = self.session.get('https://www.reddit.com')
-                #write_to_file(self.user, r.text)
+
+                if (self.user in r.text):
+                    return 1
                 break
             except:
                 self.session = get_session()
                 traceback.print_exc()
+                try_counter =- 1
+        return 0
+
+    def post(self, text):
+        pass
 
 
 def create_bots():
@@ -81,48 +90,32 @@ def create_bots():
     print(1)
     for r in rs:
         print(r)
-        creds[r[0]] = {'user_name':r[2], 'password':r[1]}
+        creds.append({'user_name':r[0], 'password':r[1]})
     conn.close()
 
     global bots
-    for i in creds.keys():
+    for i in creds:
         print(i)
-        bots.append(bot(i, creds[i]['user_name'], creds[i]['password']))
+
+        bots.append(bot(i, i['user_name'], i['password']))
 
     for b in bots:
-        print(b, ' login')
-        b.login()
-
-def get_word_weighting():
-    global rankings
-    conn = sqlite3.connect('reddit.db')
-    c = conn.cursor()
-    rs = c.execute('select * from key_words').fetchall()
-    for r in rs:
-        rankings[r[0]] = r[1]
-    conn.close()
-
+        print(b, ' attempting login')
+        if (b.login() == 1):
+            print('login succesful')
+        else:
+            print('login failure')
 
 def get_session():
     s = requests.Session()
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
     return s
 
-def write_to_file(user, r_text):
-    #r_text
-    f = open('{0}.html'.format(user), 'w')
-    f.write(r_text.encode('ascii', 'ignore'))
-    f.close()
-
 def main():
     global p_list
-    get_word_weighting()
     create_bots()
 
-    print(len(bots))
-    for b in bots:
-        b.execute_strategy1('all', 1)
-        time.sleep(random.randint(5,30))
+
 
 
 main()
