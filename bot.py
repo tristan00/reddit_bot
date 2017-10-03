@@ -15,6 +15,56 @@ creds = []
 sql_file = 'reddit_db.sqlite'
 bots = []
 
+class reader():
+    def __init__(self, subreddit, session):
+        self.name = subreddit
+        self.put_sub_to_db()
+        self.session = session
+
+    def put_sub_to_db(self):
+        conn = sqlite3.connect('reddit.db')
+        cursor = conn.cursor()
+        cursor.execute('create table if not exists {0} (sub_name TEXT PRIMARY KEY)'.format('subreddit'))
+        try:
+            cursor.execute('insert into subreddit(sub_name) values(:sub_name)', {'sub_name': self.name})
+        except:
+            pass
+
+        cursor.execute('create table if not exists {0} (post_id TEXT PRIMARY KEY, post_title TEXT, timestamp TEXT, data_permalink TEXT, comment_count int, upvotes int)'.format('posts'))
+        cursor.execute('create table if not exists {0} (post_id TEXT, comment_id PRIMARY KEY, timestamp, text)'.format('comment'))
+
+        conn.commit()
+        conn.close()
+
+    def get_post_list(self):
+        r = self.session.get('https://www.reddit.com/r/{0}/'.format(self.name))
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        posts = soup.find('div', {'id':'siteTable'}).find_all('div', recursive = False)
+
+        for p in posts:
+            print(type(p))
+            print(p['data_fullname'], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], p['data-comments-count'], None)
+        return posts
+
+    def write_posts_and_comments_to_db(self):
+        conn = sqlite3.connect('reddit.db')
+        cursor = conn.cursor()
+
+        p_list= self.get_post_list()
+        for p in p_list:
+            print(p)
+            print(p['data_fullname'], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], p['data-comments-count'], None)
+            #cursor.execute('insert into posts values(?,?,?,?,?)', (p['data_fullname'].split('_')[1], ))
+
+
+        conn.commit()
+        conn.close()
+
+    def get_comments(self):
+
+        return
+
 class bot:
     def __init__(self, bid, user_name, password):
         self.id = bid
@@ -23,7 +73,7 @@ class bot:
         self.session = get_session()
         self.sub = None
         self.uh = None
-        self.driver = webdriver.Chrome()
+        self.driver = None
 
     def login(self):
         try_counter = 3
@@ -85,6 +135,7 @@ class bot:
     #temporary
 
     def post_comment(self, parent_url, text):
+        self.driver = webdriver.Chrome()
         self.login_driver()
         self.post_driver(text, parent_url)
         self.log_of_and_quit()
@@ -142,6 +193,10 @@ def get_session():
 def main():
     global main_bot
     create_bots()
-    main_bot.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnuhvyu/', 'test9')
+    main_bot.login()
+    main_reader = reader('worldnews', main_bot.session)
+    main_reader.write_posts_and_comments_to_db()
+
+    #main_bot.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnuhvyu/', 'test9')
 
 main()
