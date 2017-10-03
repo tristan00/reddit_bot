@@ -7,6 +7,7 @@ import sqlite3
 import time
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+import post_analysis
 
 
 main_bot = None
@@ -14,44 +15,6 @@ creds = []
 sql_file = 'reddit_db.sqlite'
 bots = []
 
-#put in db
-rankings = {}
-
-class post:
-    def __init__(self, pid, data_url, comment_url, date_created, data_fullname, subreddit, title, score):
-        self.title = title
-        self.pid = pid
-        self.data_url = data_url
-        self.comment_url = comment_url
-        self.comments = []
-        self.data_fullname = data_fullname
-        self.subreddit = subreddit
-        self.score = score
-        print('post read: ', pid, data_url, comment_url, date_created, data_fullname, subreddit, title)
-
-    def todb(self):
-        pass
-
-class subreddit:
-    def __init__(self, name):
-        self.name = name
-        self.posts = []
-
-
-    def todb(self):
-        conn = sqlite3.connect(sql_file)
-        cursor = conn.cursor()
-        cursor.execute('create table if not exists {0} (sub_name TEXT PRIMARY KEY)'.format('subreddit'))
-        try:
-            cursor.execute('insert into subreddit(sub_name) values(:sub_name)', {'sub_name': self.name})
-        except:
-            traceback.print_exc()
-        conn.commit()
-
-        for p in self.posts:
-            p.todb()
-
-#BOT
 class bot:
     def __init__(self, bid, user_name, password):
         self.id = bid
