@@ -2,8 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="f8e24d84-f277-43a1-9707-eaf617e5f5fb" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/reddit.db-journal" afterPath="$PROJECT_DIR$/reddit.db-journal" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bot.py" afterPath="$PROJECT_DIR$/bot.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/db_writer.py" afterPath="$PROJECT_DIR$/db_writer.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/reddit.db" afterPath="$PROJECT_DIR$/reddit.db" />
     </list>
     <ignored path="reddit_bot.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -24,16 +25,16 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="bot.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="bot.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/bot.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="470" column="0" selection-start-line="470" selection-start-column="0" selection-end-line="470" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.19636963">
+              <caret line="7" column="0" selection-start-line="7" selection-start-column="0" selection-end-line="7" selection-end-column="0" />
               <folding>
-                <element signature="e#208#223#0" expanded="true" />
-                <element signature="e#13121#13841#0" expanded="false" />
-                <element signature="e#13877#14002#0" expanded="false" />
-                <element signature="e#14038#14337#0" expanded="false" />
+                <element signature="e#191#206#0" expanded="true" />
+                <element signature="e#13169#13889#0" expanded="false" />
+                <element signature="e#13925#14050#0" expanded="false" />
+                <element signature="e#14086#14385#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -89,11 +90,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="db_writer.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="db_writer.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/db_writer.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.30858085">
-              <caret line="11" column="0" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.0">
+              <caret line="8" column="35" selection-start-line="8" selection-start-column="35" selection-end-line="8" selection-end-column="36" />
               <folding />
             </state>
           </provider>
@@ -118,8 +119,8 @@
         <option value="$PROJECT_DIR$/subreddit_analyzer.py" />
         <option value="$PROJECT_DIR$/post_analysis.py" />
         <option value="$PROJECT_DIR$/reddit.db" />
-        <option value="$PROJECT_DIR$/bot.py" />
         <option value="$PROJECT_DIR$/db_writer.py" />
+        <option value="$PROJECT_DIR$/bot.py" />
       </list>
     </option>
   </component>
@@ -172,10 +173,6 @@
               <option name="myItemId" value="" />
               <option name="myItemType" value="" />
             </PATH_ELEMENT>
-            <PATH_ELEMENT USER_OBJECT="reddit_bot">
-              <option name="myItemId" value="" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
           </PATH>
         </subPane>
       </pane>
@@ -192,7 +189,7 @@
       <recent name="D:\reddit_bot" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.db_writer (1)">
+  <component name="RunManager" selected="Python.bot">
     <configuration default="false" name="bot" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -373,8 +370,8 @@
     </list>
     <recent_temporary>
       <list size="3">
-        <item index="0" class="java.lang.String" itemvalue="Python.db_writer (1)" />
-        <item index="1" class="java.lang.String" itemvalue="Python.bot" />
+        <item index="0" class="java.lang.String" itemvalue="Python.bot" />
+        <item index="1" class="java.lang.String" itemvalue="Python.db_writer (1)" />
         <item index="2" class="java.lang.String" itemvalue="Python.db_writer" />
       </list>
     </recent_temporary>
@@ -394,9 +391,9 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="1912" y="-8" width="1936" height="1056" extended-state="6" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
@@ -438,10 +435,10 @@
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="e#208#223#0" expanded="true" />
-            <element signature="e#13121#13841#0" expanded="false" />
-            <element signature="e#13877#14002#0" expanded="false" />
-            <element signature="e#14038#14337#0" expanded="false" />
+            <element signature="e#191#206#0" expanded="true" />
+            <element signature="e#13169#13889#0" expanded="false" />
+            <element signature="e#13925#14050#0" expanded="false" />
+            <element signature="e#14086#14385#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -491,10 +488,10 @@
         <state vertical-scroll-proportion="0.0">
           <caret line="141" column="33" selection-start-line="141" selection-start-column="33" selection-end-line="141" selection-end-column="33" />
           <folding>
-            <element signature="e#208#223#0" expanded="true" />
-            <element signature="e#13121#13841#0" expanded="false" />
-            <element signature="e#13877#14002#0" expanded="false" />
-            <element signature="e#14038#14337#0" expanded="false" />
+            <element signature="e#191#206#0" expanded="true" />
+            <element signature="e#13169#13889#0" expanded="false" />
+            <element signature="e#13925#14050#0" expanded="false" />
+            <element signature="e#14086#14385#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -544,10 +541,10 @@
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="e#208#223#0" expanded="true" />
-            <element signature="e#13121#13841#0" expanded="false" />
-            <element signature="e#13877#14002#0" expanded="false" />
-            <element signature="e#14038#14337#0" expanded="false" />
+            <element signature="e#191#206#0" expanded="true" />
+            <element signature="e#13169#13889#0" expanded="false" />
+            <element signature="e#13925#14050#0" expanded="false" />
+            <element signature="e#14086#14385#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -575,35 +572,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://C:/Python35/Lib/statistics.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="349" column="0" selection-start-line="349" selection-start-column="0" selection-end-line="349" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Python35/Lib/site-packages/bs4/element.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="996" column="0" selection-start-line="996" selection-start-column="0" selection-end-line="996" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/bot.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="470" column="0" selection-start-line="470" selection-start-column="0" selection-end-line="470" selection-end-column="0" />
-          <folding>
-            <element signature="e#208#223#0" expanded="true" />
-            <element signature="e#13121#13841#0" expanded="false" />
-            <element signature="e#13877#14002#0" expanded="false" />
-            <element signature="e#14038#14337#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/reddit.db">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-4.4074073">
@@ -628,11 +596,40 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://C:/Python35/Lib/statistics.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="349" column="0" selection-start-line="349" selection-start-column="0" selection-end-line="349" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/Python35/Lib/site-packages/bs4/element.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="996" column="0" selection-start-line="996" selection-start-column="0" selection-end-line="996" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/db_writer.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.30858085">
-          <caret line="11" column="0" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.0">
+          <caret line="8" column="35" selection-start-line="8" selection-start-column="35" selection-end-line="8" selection-end-column="36" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/bot.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.19636963">
+          <caret line="7" column="0" selection-start-line="7" selection-start-column="0" selection-end-line="7" selection-end-column="0" />
+          <folding>
+            <element signature="e#191#206#0" expanded="true" />
+            <element signature="e#13169#13889#0" expanded="false" />
+            <element signature="e#13925#14050#0" expanded="false" />
+            <element signature="e#14086#14385#0" expanded="false" />
+          </folding>
         </state>
       </provider>
     </entry>

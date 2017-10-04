@@ -5,8 +5,6 @@
 #switch data analysis to panda
 #add strategy picking functionalioty
 #generalize comment reading
-#fix nsfw issue
-
 
 import requests
 import json
@@ -20,11 +18,14 @@ from selenium.webdriver.common.keys import Keys
 import re
 import datetime
 import statistics
+import os
 
 main_bot = None
 creds = []
 sql_file = 'reddit_db.sqlite'
 bots = []
+
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 subreddits = ['worldnews', 'gonewild', 'nsfw', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'NSFW_GIF', 'news']
 strategies = [1]
@@ -478,10 +479,12 @@ def main():
     global main_bot
     try:
         create_bots()
-        main_bot.login()
     except:
         traceback.print_exc()
     time.sleep(10)
+
+
+
 
     #main_reader.write_posts_and_comments_to_db()
     #main_bot.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnuhvyu/', 'test9')
