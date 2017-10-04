@@ -27,7 +27,7 @@ bots = []
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-subreddits = ['worldnews', 'gonewild', 'nsfw', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'NSFW_GIF', 'news']
+subreddits = ['worldnews', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'news']
 strategies = [1]
 
 class reader():
