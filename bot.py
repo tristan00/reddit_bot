@@ -4,6 +4,7 @@
 #implement soluition 1
 #switch data analysis to panda
 #add strategy picking functionalioty
+#generalize comment reading
 
 
 
@@ -26,7 +27,7 @@ sql_file = 'reddit_db.sqlite'
 bots = []
 
 
-subreddits = ['dota2', 'worldnews', 'gonewild', 'nsfw', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'NSFW_GIF', 'news']
+subreddits = ['worldnews', 'gonewild', 'nsfw', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'NSFW_GIF', 'news']
 
 class reader():
     def __init__(self, subreddit, session):
@@ -34,11 +35,20 @@ class reader():
         self.put_sub_to_db()
         self.session = session
         self.write_posts_and_comments_to_db()
+        #self.read_all()
 
         self.word_dict = {}
         self.sentence_dict = {}
         self.sentence_count_dict = {}
         self.pick_strategy_and_sub()
+
+
+    def read_all(self):
+        temp = self.name
+        for i in subreddits:
+            self.name = i
+            self.write_posts_and_comments_to_db()
+        self.name = temp
 
     def put_sub_to_db(self):
         conn = sqlite3.connect('reddit.db')
@@ -56,12 +66,13 @@ class reader():
         conn.close()
 
     def write_post(self, conn, p):
+        #print(p.attrs)
         try:
             conn.execute('insert into posts values(?,?,?,?,?,?,?)', (self.name ,p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], 0, 0) )
             print('Inserted post:', p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
-            return p['data-permalink']
+            return (p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
         except:
-            return None
+            return (None, None, None, None, None, None)
 
     def get_post_list(self):
         conn = sqlite3.connect('reddit.db')
@@ -70,7 +81,7 @@ class reader():
         r = self.session.get('https://www.reddit.com/r/{0}/'.format(self.name))
         soup = BeautifulSoup(r.text, "html.parser")
 
-        posts = soup.find('div', {'id':'siteTable'}).find_all('div', recursive = False)
+        posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
         print(len(posts))
         for p in posts:
@@ -131,6 +142,7 @@ class reader():
 
         res = conn.execute('select distinct data_permalink, post_id from posts')
         for p in res:
+            #continue
             time.sleep(3)
             print(p)
             self.write_comments(p,conn)
@@ -143,47 +155,82 @@ class reader():
     def strategy1(self):
         comment_min_len = 10
         min_comments = 2
+        comment_words = None
+        comment_to_respond_to = None
+        comment_to_respond_to_text= None
 
         #pick post, new post with high upvotes
         conn = sqlite3.connect('reddit.db')
-        r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(self.name))
+        r = self.session.get('https://www.reddit.com/r/{0}/rising'.format(self.name))
         soup = BeautifulSoup(r.text,'html.parser')
-        p = soup.find('div', {'id':'siteTable'}).find_all('div', recursive = False)[0]
-        p_id = self.write_post(conn, p)
-        #pick comment, second earliest since earliest is often mod post
+        ps = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
-        r = self.session.get('https://www.reddit.com' + p_id)
-        comments = soup.find_all('div', {'class': re.compile("entry unvoted.*")})
-        if len(comments) > min_comments:
-            return (None, None)
+        p_url = None
+        p_id = None
 
-        comment_dict = {}
-        earliest_comment_timestamp = None
-        second_earliest_comment_timestamp = None
-        for c in comments:
-            if len(c.find('div', {'class':'md'}).text.lower()) < comment_min_len:
+        return_value= None
+        for p in ps:
+            post_data = self.write_post(conn, p)
+            p_url = post_data[3]
+            p_id = post_data[0]
+
+            print('p_id, P_url:', p_id, p_url)
+            if p_url is None or p_id is None:
                 continue
 
-            time_str = c.find('time')['datetime']
-            comment_timestamp = datetime.datetime.strptime(time_str,'%Y-%m-%dT%H:%M:%S+00:00').timestamp()
-            if earliest_comment_timestamp is None:
-                earliest_comment_timestamp = comment_timestamp
-            elif second_earliest_comment_timestamp is None and comment_timestamp > earliest_comment_timestamp:
-                second_earliest_comment_timestamp = comment_timestamp
-            elif second_earliest_comment_timestamp is None and comment_timestamp < earliest_comment_timestamp:
-                second_earliest_comment_timestamp = earliest_comment_timestamp
-                earliest_comment_timestamp = comment_timestamp
+            #pick comment, second earliest since earliest is often mod post
+            r = self.session.get('https://www.reddit.com' + p_url)
+            comment_table = soup.find('div', {'class':'sitetable nestedlisting'})
+            comments = comment_table.find_all('div', {'class': re.compile("entry unvoted.*")})
+            print('num of comments: ', len(comments))
+            if len(comments) < min_comments:
+                return_value = 'Not enough comments'
+                continue
+            else:
+                return_value = None
 
-            comment_dict[comment_timestamp] = c
 
-        comment_to_respond_to = comment_dict[earliest_comment_timestamp]
+            comment_dict = {}
+            earliest_comment_timestamp = None
+            second_earliest_comment_timestamp = None
+            for c in comments:
+                try:
+                    print('atributes: ', c.attrs)
+                    print('html: ', c)
+                    print('text len: ',len(c.find('div', {'class':'md'}).text.lower()))
+                    if len(c.find('div', {'class':'md'}).text.lower()) < comment_min_len:
+                        continue
 
-        comment_to_respond_to_text= comment_to_respond_to.find('div', {'class':'md'}).text.lower()
-        comment_to_respond_to_text = comment_to_respond_to_text.replace(r'\n','.')
-        comment_words = re.split('[.!?]+',comment_to_respond_to_text)
+                    time_str = c.find('time')['datetime']
+                    comment_timestamp = datetime.datetime.strptime(time_str,'%Y-%m-%dT%H:%M:%S+00:00').timestamp()
+                    if earliest_comment_timestamp is None:
+                        earliest_comment_timestamp = comment_timestamp
+                    elif second_earliest_comment_timestamp is None and comment_timestamp > earliest_comment_timestamp:
+                        second_earliest_comment_timestamp = comment_timestamp
+                    elif second_earliest_comment_timestamp is None and comment_timestamp < earliest_comment_timestamp:
+                        second_earliest_comment_timestamp = earliest_comment_timestamp
+                        earliest_comment_timestamp = comment_timestamp
+
+                    comment_dict[comment_timestamp] = c
+                except:
+                    traceback.print_exc()
+
+
+            comment_to_respond_to = comment_dict[earliest_comment_timestamp]
+
+            comment_to_respond_to_text= comment_to_respond_to.find('div', {'class':'md'}).text.lower()
+            comment_to_respond_to_text = comment_to_respond_to_text.replace(r'\n','.')
+            comment_words = re.split('[.!?]+',comment_to_respond_to_text)
+            break
 
 
         #run dict maker only accepting sentences that share words with title and/or post
+        print(p_url, p_id, comment_to_respond_to_text)
+
+        if p_url is None or p_id is None:
+            return_value = 'null pid'
+            return
+
         res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
 
         for r in res:
@@ -219,12 +266,14 @@ class reader():
                 print(i, self.sentence_dict[i])
                 current_comment = i
 
-        print(statistics.median(self.sentence_dict[i]), current_comment)
-
+        print('median: ', statistics.median(self.sentence_dict[i]), current_comment)
+        print('current comment text:', current_comment)
+        print('p_id:',p_id)
+        print('parent comment:', comment_to_respond_to_text)
         #put optimal number of sentences and post it as response
 
     def pick_strategy_and_sub(self):
-        self.strategy1()
+        print(self.strategy1())
 
 class bot:
     def __init__(self, bid, user_name, password):
@@ -355,7 +404,7 @@ def main():
     global main_bot
     create_bots()
     main_bot.login()
-    main_reader = reader('me_irl', main_bot.session)
+    main_reader = reader('funny', main_bot.session)
 
 
     #main_reader.write_posts_and_comments_to_db()
