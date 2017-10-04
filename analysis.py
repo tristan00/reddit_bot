@@ -26,24 +26,23 @@ class comment_data():
         self.time_str = self.soup.find('time')['datetime']
         self.comment_timestamp = datetime.datetime.strptime(self.time_str,'%Y-%m-%dT%H:%M:%S+00:00').timestamp()
 
-        self.text = self.text.lower()
-        self.text = self.text.replace(r'\n','.')
+        self.text2 = self.text.lower()
+        self.text2 = self.text2.replace(r'\n','.')
 
-        self.sentences = re.split('[.!?]+',self.text)
+        self.sentences = re.split('[.!?]+',self.text2)
         self.comment_words = []
         for i in self.sentences:
             self.comment_words.extend(re.split('[ .!?]+',i))
 
 class reader():
-    def __init__(self, subreddit, session):
-        self.name = subreddit
+    def __init__(self, session):
+        self.name = ""
+        self.reset_subreddit()
         self.put_sub_to_db()
         self.session = session
         #self.write_posts_and_comments_to_db()
-        self.read_all()
 
         self.word_dict = {}
-        self.sentence_dict = {}
         self.sentence_count_dict = {}
 
     def read_all(self):
@@ -55,14 +54,13 @@ class reader():
         self.name = temp
         self.write_posts_and_comments_to_db()
 
-
-    def get_subreddit(self):
+    def reset_subreddit(self):
         s_list = []
         conn = sqlite3.connect('reddit.db', timeout=10)
         res = conn.execute('select * from subreddit')
         for s in res:
             s_list.append(s[0])
-        return random.choice(s_list)
+        self.name= random.choice(s_list)
 
     def put_sub_to_db(self):
         conn = sqlite3.connect('reddit.db')
@@ -182,6 +180,8 @@ class reader():
     def strategy1(self):
         comment_min_len = 10
         min_comments = 2
+        min_relevance_threshold = .2
+        max_relevance_threshold = .9
 
         #pick post, new post with high upvotes
         conn = sqlite3.connect('reddit.db')
@@ -240,6 +240,8 @@ class reader():
         for p in posts:
             #run dict maker only accepting sentences that share words with title and/or post
             for c in p.comments:
+
+                self.sentence_dict = {}
                 try:
                     print(p.url, p.p_id, p.comments[1].text)
                 except:
@@ -250,44 +252,36 @@ class reader():
                 res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
 
                 for r in res:
-                    text_post = r[2].replace(r'\n','.')
+                    text_post = r[2]
                     text_post = text_post.lower()
-                    relevant = False
+                    relevance =0
                     for w in c.comment_words:
                         if w in text_post:
-                            relevant = True
-                    if not relevant:
+                            relevance +=  True
+                    if relevance < min_relevance_threshold or relevance > max_relevance_threshold:
                         continue
 
-                    sentences = re.split('[.!?]*',text_post)
 
-                    sentences2 = []
-                    for s in sentences:
-                        if len(s) >1:
-                            sentences2.append(s)
 
-                    if len(sentences2) < 2:
+                    formatted_string = text_post.lower().strip()
+                    print('formatted string', formatted_string)
+                    normalized_sentence = formatted_string
+                    if len(formatted_string) < comment_min_len:
                         continue
 
-                    for s in sentences2:
-                        formatted_string = s.lower().strip()
-                        print('formatted string', formatted_string)
-                        normalized_sentence = formatted_string
-                        if len(formatted_string) < comment_min_len:
-                            continue
+                    try:
+                        if normalized_sentence in self.sentence_dict.keys():
+                            temp_list = self.sentence_dict[normalized_sentence][0]
+                            templist2= self.sentence_dict[normalized_sentence][4]
+                            temp_list.append(int(r[3]))
+                            templist2.append(text_post)
+                            self.sentence_dict[normalized_sentence] = (temp_list, r[0], r[4], relevance, templist2)
+                        else:
+                            self.sentence_dict[normalized_sentence] = ([int(r[3])], r[0], r[4], relevance, [text_post])
 
-                        try:
-                            if normalized_sentence in self.sentence_dict.keys():
-                                temp_list = self.sentence_dict[normalized_sentence][0]
-                                temp_list.append(int(r[3]))
-                                self.sentence_dict[normalized_sentence] = (temp_list, r[0], r[4])
-                                print(s, self.sentence_dict[normalized_sentence])
-                            else:
-                                self.sentence_dict[normalized_sentence] = ([int(r[3])], r[0], r[4])
-
-                        except:
-                            #to do, fix key error
-                            traceback.print_exc()
+                    except:
+                        #to do, fix key error
+                        traceback.print_exc()
 
                 current_comment = None
                 max_median = 0
@@ -297,20 +291,23 @@ class reader():
                     for i in self.sentence_dict.keys():
                         print(self.sentence_dict[i][0])
                         if ( 'http' not in self.sentence_dict[i][0]):
-                            if(max_median < statistics.median(self.sentence_dict[i][0]) and len(self.sentence_dict[i][0]) > 5):
+                            if(max_median < statistics.median(self.sentence_dict[i][0]) and len(self.sentence_dict[i][0]) > 10):
                                 max_median = statistics.median(self.sentence_dict[i][0])
                                 current_comment = i
                                 print('current_comment: ', current_comment)
 
 
+                    sentence_tuples = zip(self.sentence_dict[current_comment][0],self.sentence_dict[current_comment][4])
+                    sorted(sentence_tuples, key=operator.itemgetter(0))
 
-                    print('median: ', statistics.median(self.sentence_dict[current_comment][0]), self.sentence_dict[current_comment][0])
-                    print('current comment text:', current_comment)
+                    print('median: ', statistics.median(self.sentence_dict[current_comment][0]))
+                    print('sentence: ', sentence_tuples[0])
+                    print('current comment text:', sentence_tuples[0][1])
                     print('p_id:',p_id)
                     print('parent comment:')
-                    print('returning:', ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], current_comment + '.'))
+                    print('returning:', ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1]))
                     #put optimal number of sentences and post it as response
-                    return ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], current_comment + '.')
+                    return ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1])
                 except:
                     traceback.print_exc()
 
@@ -319,3 +316,4 @@ class reader():
     def pick_strategy_and_sub(self):
         results = self.strategy1()
         return results
+

@@ -1,10 +1,6 @@
 #to do
-#add parent pointer in comment data
-#add reporting functionlity
-#implement soluition 1
 #switch data analysis to panda
 #add strategy picking functionalioty
-#generalize comment reading
 
 import requests
 import json
@@ -39,19 +35,21 @@ class bot:
         self.uh = None
         self.driver = None
 
-        self.subreddit = self.get_subreddit()
-        self.main_reader = analysis.reader(self.subreddit, self.session)
-        self.result = self.main_reader.pick_strategy_and_sub()
-        self.strat_picker(self.result[0], self.result[1])
+        self.main_reader = analysis.reader(self.session)
+
+        for i in range(1):
+            self.main_reader.read_all()
+            self.main_reader.reset_subreddit()
+            result=self.main_reader.pick_strategy_and_sub()
+            self.post_comment(self.result[0], self.result[1])
+            time.sleep(600)
         #self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
 
-    def get_subreddit(self):
-        s_list = []
-        conn = sqlite3.connect('reddit.db', timeout=10)
-        res = conn.execute('select * from subreddit')
-        for s in res:
-            s_list.append(s[0])
-        return random.choice(s_list)
+    def write_new_data_log(self,url, text):
+        parent_url = url
+        conn = sqlite3.connect('reddit.db')
+        conn.execute('create table if not exists {0} (url TEXT, parent_url text primary key, subreddit text, strat int, result int)'.format('log'))
+        conn.execute('insert into log values (?,?,?,?,?)',(None, url,self.main_reader.name, 1,None))
 
     def login(self):
         try_counter = 3
@@ -91,11 +89,7 @@ class bot:
 
         #read_url
         r = self.session.get(comment_page_url)
-
         soup = BeautifulSoup(r.text, "html.parser")
-
-        #thing_id=t1_dnufe8gtext=test43id=#commentreply_t1_dnufe8gr=howdoesredditworkuh=i8fn7btghc6e4f0adb3d2bfdf873256a51885084700a01b562renderstyle=html
-        #{'uh': 'hdzjn9f7i4d15e53e581e90c831a42a60359024e8e77091895', 'thing_id': 't1_dnufe8g', 'r': 'howdoesredditwork', 'c_id': '#commentreply_t1_dnufe8g', 'renderstyle': 'html'}
 
         thing_id = 't1_' + parent_comment_id
         c_id = '#commentreply_' + 't1_' +parent_comment_id
@@ -109,22 +103,13 @@ class bot:
         print(r.status_code)
 
 
-    def strat_picker(self, url, text):
-
-        for i in range(0,5):
-            try:
-                self.post_comment(url, text)
-                break
-            except:
-                traceback.print_exc()
-
     #temporary
     def post_comment(self, parent_url, text):
         self.driver = webdriver.Chrome()
         self.login_driver()
         self.post_driver(text, parent_url)
         self.log_of_and_quit()
-
+        self.write_new_data_log(parent_url, text)
         #conn = sqlite3.connect('reddit.db')
         #conn.execute('create table if not exists {0} (url TEXT, subreddit text, strat int, result int)'.format('log'))
         #conn.execute('insert into log values (?,?,?,?)', (parent_url,,?,?))
@@ -206,6 +191,7 @@ def create_bots():
     conn.close()
 
 
+
 def get_session():
     s = requests.Session()
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
@@ -218,14 +204,5 @@ def main():
     except:
         traceback.print_exc()
 
-
-
-
-
-    #main_reader.write_posts_and_comments_to_db()
-    #main_bot.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnuhvyu/', 'test9')
-
-
 if __name__ == "__main__":
-    # execute only if run as a script
     main()
