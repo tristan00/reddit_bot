@@ -34,21 +34,21 @@ class reader():
         self.name = subreddit
         self.put_sub_to_db()
         self.session = session
-        self.write_posts_and_comments_to_db()
-        #self.read_all()
+        #self.write_posts_and_comments_to_db()
+        self.read_all()
 
         self.word_dict = {}
         self.sentence_dict = {}
         self.sentence_count_dict = {}
-        self.pick_strategy_and_sub()
-
 
     def read_all(self):
         temp = self.name
         for i in subreddits:
+            print('reading posts in :', i)
             self.name = i
-            self.write_posts_and_comments_to_db()
+            self.get_post_list()
         self.name = temp
+        self.write_posts_and_comments_to_db()
 
     def put_sub_to_db(self):
         conn = sqlite3.connect('reddit.db')
@@ -77,18 +77,23 @@ class reader():
     def get_post_list(self):
         conn = sqlite3.connect('reddit.db')
         cursor = conn.cursor()
+        try:
 
-        r = self.session.get('https://www.reddit.com/r/{0}/'.format(self.name))
-        soup = BeautifulSoup(r.text, "html.parser")
+            r = self.session.get('https://www.reddit.com/r/{0}/'.format(self.name))
+            soup = BeautifulSoup(r.text, "html.parser")
 
-        posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
+            posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
-        print(len(posts))
-        for p in posts:
-            self.write_post(conn, p)
-        conn.commit()
-        conn.close()
-        print('writing posts done')
+            print(len(posts))
+            for p in posts:
+                self.write_post(conn, p)
+            conn.commit()
+            conn.close()
+            print('writing posts done')
+        except:
+            traceback.print_exc()
+            time.sleep(1)
+            #fix
 
     def write_comments(self, p, conn):
         try:
@@ -138,7 +143,7 @@ class reader():
 
     def write_posts_and_comments_to_db(self):
         conn = sqlite3.connect('reddit.db')
-        self.get_post_list()
+
 
         res = conn.execute('select distinct data_permalink, post_id from posts')
         for p in res:
@@ -180,7 +185,9 @@ class reader():
 
             #pick comment, second earliest since earliest is often mod post
             r = self.session.get('https://www.reddit.com' + p_url)
+            soup = BeautifulSoup(r.text,'html.parser')
             comment_table = soup.find('div', {'class':'sitetable nestedlisting'})
+            print('comment table: ', comment_table.attrs, comment_table)
             comments = comment_table.find_all('div', {'class': re.compile("entry unvoted.*")})
             print('num of comments: ', len(comments))
             if len(comments) < min_comments:
@@ -189,15 +196,11 @@ class reader():
             else:
                 return_value = None
 
-
             comment_dict = {}
             earliest_comment_timestamp = None
             second_earliest_comment_timestamp = None
             for c in comments:
                 try:
-                    print('atributes: ', c.attrs)
-                    print('html: ', c)
-                    print('text len: ',len(c.find('div', {'class':'md'}).text.lower()))
                     if len(c.find('div', {'class':'md'}).text.lower()) < comment_min_len:
                         continue
 
@@ -231,7 +234,7 @@ class reader():
             return_value = 'null pid'
             return
 
-        res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
+        res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
 
         for r in res:
             text_post = r[2].replace(r'\n','.')
@@ -251,29 +254,46 @@ class reader():
                     sentences2.append(s)
 
             for s in sentences2:
-                normalized_sentence = s.lower()
-                if normalized_sentence in self.sentence_dict.keys():
-                    self.sentence_dict[normalized_sentence] = self.sentence_dict[normalized_sentence].append(int(r[3]))
-                else:
-                    self.sentence_dict[normalized_sentence] = [int(r[3])]
+                formatted_string = s.lower().strip()
+                print('formatted string', formatted_string)
+                normalized_sentence = formatted_string
+                if len(formatted_string) < comment_min_len:
+                    continue
+
+                try:
+                    if normalized_sentence in self.sentence_dict.keys():
+                        temp_list = self.sentence_dict[normalized_sentence][0]
+                        temp_list.append(int(r[3]))
+                        self.sentence_dict[normalized_sentence] = (temp_list, r[0], r[4])
+                        print(s, self.sentence_dict[normalized_sentence])
+                    else:
+                        self.sentence_dict[normalized_sentence] = ([int(r[3])], r[0], r[4])
+
+                except:
+                    #to do, fix key error
+                    traceback.print_exc()
 
         current_comment = None
         max_median = 0
+        print('num of keys: ', len(self.sentence_dict.keys()))
         for i in self.sentence_dict.keys():
-            self.sentence_dict[i] = (self.sentence_dict[i][0],self.sentence_dict[i][1],self.sentence_dict[i][1]/self.sentence_dict[i][0])
-            if(max_median < statistics.median(self.sentence_dict[i]) and len(self.sentence_dict[i]) > 5):
-                max_median = statistics.median(self.sentence_dict[i])
-                print(i, self.sentence_dict[i])
+            if(max_median < statistics.median(self.sentence_dict[i][0])):
+                max_median = statistics.median(self.sentence_dict[i][0])
                 current_comment = i
+                print('current_comment: ', current_comment)
 
-        print('median: ', statistics.median(self.sentence_dict[i]), current_comment)
+
+        print('median: ', statistics.median(self.sentence_dict[current_comment][0]), self.sentence_dict[current_comment][0])
         print('current comment text:', current_comment)
         print('p_id:',p_id)
-        print('parent comment:', comment_to_respond_to_text)
+        print('parent comment:', ' '.join(comment_words))
+        print('returning:', ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], current_comment + '.'))
         #put optimal number of sentences and post it as response
+        return ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], current_comment + '.')
 
     def pick_strategy_and_sub(self):
-        print(self.strategy1())
+        results = self.strategy1()
+        return results
 
 class bot:
     def __init__(self, bid, user_name, password):
@@ -284,6 +304,10 @@ class bot:
         self.sub = None
         self.uh = None
         self.driver = None
+        self.main_reader = reader('funny', self.session)
+        self.result = self.main_reader.pick_strategy_and_sub()
+        #self.post_comment(self.result[0], self.result[1])
+        self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
 
     def login(self):
         try_counter = 3
@@ -308,7 +332,6 @@ class bot:
         r = self.session.get('https://www.reddit.com/api/me.json')
         j = json.loads(r.text)
         return j['data']['modhash']
-
 
     def isloggedin(self):
         r = self.session.get('https://www.reddit.com')
@@ -404,11 +427,13 @@ def main():
     global main_bot
     create_bots()
     main_bot.login()
-    main_reader = reader('funny', main_bot.session)
+
 
 
     #main_reader.write_posts_and_comments_to_db()
 
     #main_bot.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnuhvyu/', 'test9')
+
+
 
 main()
