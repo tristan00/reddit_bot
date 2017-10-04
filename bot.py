@@ -5,7 +5,7 @@
 #switch data analysis to panda
 #add strategy picking functionalioty
 #generalize comment reading
-
+#fix nsfw issue
 
 
 import requests
@@ -26,8 +26,8 @@ creds = []
 sql_file = 'reddit_db.sqlite'
 bots = []
 
-
 subreddits = ['worldnews', 'gonewild', 'nsfw', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'NSFW_GIF', 'news']
+strategies = [1]
 
 class reader():
     def __init__(self, subreddit, session):
@@ -76,24 +76,30 @@ class reader():
 
     def get_post_list(self):
         conn = sqlite3.connect('reddit.db')
-        cursor = conn.cursor()
-        try:
+        tries = 3
+        while tries >0:
+            time.sleep(3)
+            try:
 
-            r = self.session.get('https://www.reddit.com/r/{0}/'.format(self.name))
-            soup = BeautifulSoup(r.text, "html.parser")
+                r = self.session.get('https://www.reddit.com/r/{0}/'.format(self.name))
+                soup = BeautifulSoup(r.text, "html.parser")
 
-            posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
+                posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
-            print(len(posts))
-            for p in posts:
-                self.write_post(conn, p)
-            conn.commit()
-            conn.close()
-            print('writing posts done')
-        except:
-            traceback.print_exc()
-            time.sleep(1)
-            #fix
+                print(len(posts))
+                for p in posts:
+                    self.write_post(conn, p)
+                conn.commit()
+                conn.close()
+                print('writing posts done')
+                conn.close()
+                break
+            except:
+                traceback.print_exc()
+                conn.close()
+                tries -= 1
+                #fix
+
 
     def write_comments(self, p, conn):
         try:
@@ -137,13 +143,11 @@ class reader():
                 except:
                     pass
                     #traceback.print_exc()
-
         except:
             traceback.print_exc()
 
     def write_posts_and_comments_to_db(self):
         conn = sqlite3.connect('reddit.db')
-
 
         res = conn.execute('select distinct data_permalink, post_id from posts')
         for p in res:
@@ -304,10 +308,20 @@ class bot:
         self.sub = None
         self.uh = None
         self.driver = None
-        self.main_reader = reader('funny', self.session)
+
+        self.subreddit = self.get_subreddit()
+        self.main_reader = reader(self.subreddit, self.session)
         self.result = self.main_reader.pick_strategy_and_sub()
-        #self.post_comment(self.result[0], self.result[1])
-        self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
+        self.post_comment(self.result[0], self.result[1])
+        #self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
+
+    def get_subreddit(self):
+        s_list = []
+        conn = sqlite3.connect('reddit.db', timeout=10)
+        res = conn.execute('select * from subreddit')
+        for s in res:
+            s_list.append(s[0])
+        return random.choice(s_list)
 
     def login(self):
         try_counter = 3
@@ -373,6 +387,10 @@ class bot:
         self.post_driver(text, parent_url)
         self.log_of_and_quit()
 
+        #conn = sqlite3.connect('reddit.db')
+        #conn.execute('create table if not exists {0} (url TEXT, subreddit text, strat int, result int)'.format('log'))
+        #conn.execute('insert into log values (?,?,?,?)', (parent_url,,?,?))
+
     def login_driver(self):
         self.driver.get('https://www.reddit.com/login')
         self.driver.find_element_by_id('user_login').send_keys(self.user)
@@ -383,20 +401,53 @@ class bot:
         time.sleep(1)
 
     def post_driver(self, text, parent_comment_url):
-        thing_id = '#thing_t1_' + parent_comment_url.split('/')[-2]
-        c_id = '#commentreply_t1_' + parent_comment_url.split('/')[-2]
-        self.driver.get(parent_comment_url)
-        '#thing_t1_dnuhvyu > div.entry.unvoted > ul > li.reply-button > a'
-        self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button > a').click()
-        time.sleep(2)
-        self.driver.find_element_by_css_selector(c_id + ' > div > div.md > textarea').send_keys(text)
-        time.sleep(2)
-        self.driver.find_element_by_css_selector(c_id + ' > div > div.bottom-area > div > button.save').click()
+        try:
+            thing_id = '#thing_t1_' + parent_comment_url.split('/')[-2]
+            print('things',parent_comment_url.split('/'))
+            c_id = '#commentreply_t1_' + parent_comment_url.split('/')[-2]
+            self.driver.get(parent_comment_url)
+            time.sleep(5)
+            '#thing_t1_dnuhvyu > div.entry.unvoted > ul > li.reply-button > a'
+            try:
+                self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button > a').click()
+            except:
+                try:
+                    self.driver.find_element_by_css_selector(thing_id + ' > div.entry.likes.RES-keyNav-activeElement > ul > li.reply-button > a').click()
+                except:
+                    self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button').find_element_by_tag_name('a').click()
+
+
+            time.sleep(2)
+            self.driver.find_element_by_css_selector(c_id + ' > div > div.md > textarea').send_keys(text)
+            time.sleep(2)
+            self.driver.find_element_by_css_selector(c_id + ' > div > div.bottom-area > div > button.save').click()
+        except:
+            thing_id = '#thing_t1_' + parent_comment_url.split('/')[-1]
+            print('things',parent_comment_url.split('/'))
+            c_id = '#commentreply_t1_' + parent_comment_url.split('/')[-1]
+            self.driver.get(parent_comment_url)
+            '#thing_t1_dnuhvyu > div.entry.unvoted > ul > li.reply-button > a'
+            try:
+                self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button > a').click()
+            except:
+                try:
+                    self.driver.find_element_by_css_selector(thing_id + ' > div.entry.likes.RES-keyNav-activeElement > ul > li.reply-button > a').click()
+                except:
+                    self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button').find_element_by_tag_name('a').click()
+
+            time.sleep(2)
+            self.driver.find_element_by_css_selector(c_id + ' > div > div.md > textarea').send_keys(text)
+            time.sleep(2)
+            self.driver.find_element_by_css_selector(c_id + ' > div > div.bottom-area > div > button.save').click()
+
         time.sleep(2)
 
     def log_of_and_quit(self):
         self.driver.find_element_by_css_selector('#header-bottom-right > form > a').click()
         self.driver.quit()
+
+    def buildGittins(self):
+        pass
 
 
 
@@ -425,15 +476,17 @@ def get_session():
 
 def main():
     global main_bot
-    create_bots()
-    main_bot.login()
-
-
+    try:
+        create_bots()
+        main_bot.login()
+    except:
+        traceback.print_exc()
+    time.sleep(10)
 
     #main_reader.write_posts_and_comments_to_db()
-
     #main_bot.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnuhvyu/', 'test9')
 
 
-
-main()
+if __name__ == "__main__":
+    # execute only if run as a script
+    main()
