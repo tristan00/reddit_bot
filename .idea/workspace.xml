@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="BookmarkManager">
+    <bookmark url="file://$PROJECT_DIR$/analysis.py" line="224" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="f8e24d84-f277-43a1-9707-eaf617e5f5fb" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/analysis.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/analysis.py" afterPath="$PROJECT_DIR$/analysis.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bot.py" afterPath="$PROJECT_DIR$/bot.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/db_writer.py" afterPath="$PROJECT_DIR$/db_writer.py" />
     </list>
     <ignored path="reddit_bot.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -29,13 +30,13 @@
       <file leaf-file-name="bot.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/bot.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.58925474">
-              <caret line="119" column="43" selection-start-line="119" selection-start-column="43" selection-end-line="119" selection-end-column="43" />
+            <state vertical-scroll-proportion="0.21287128">
+              <caret line="35" column="20" selection-start-line="35" selection-start-column="20" selection-end-line="35" selection-end-column="20" />
               <folding>
                 <element signature="e#191#206#0" expanded="true" />
-                <element signature="e#1447#2167#0" expanded="false" />
-                <element signature="e#2203#2328#0" expanded="false" />
-                <element signature="e#2364#2663#0" expanded="false" />
+                <element signature="e#1469#2189#0" expanded="false" />
+                <element signature="e#2225#2350#0" expanded="false" />
+                <element signature="e#2386#2685#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -44,81 +45,16 @@
       <file leaf-file-name="analysis.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/analysis.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="12" column="0" selection-start-line="12" selection-start-column="0" selection-end-line="12" selection-end-column="0" />
+            <state vertical-scroll-proportion="-15.24138">
+              <caret line="26" column="36" selection-start-line="26" selection-start-column="36" selection-end-line="26" selection-end-column="36" />
               <folding>
                 <element signature="e#2#31#0" expanded="true" />
+                <element signature="e#1043#1294#0" expanded="false" />
+                <element signature="e#1837#2576#0" expanded="false" />
+                <element signature="e#2621#3255#0" expanded="false" />
+                <element signature="e#3294#4098#0" expanded="false" />
+                <element signature="e#6488#6820#0" expanded="false" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="_pydev_execfile.py" pinned="false" current-in-tab="false">
-        <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/_pydev_imps/_pydev_execfile.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="14" column="22" selection-start-line="14" selection-start-column="22" selection-end-line="14" selection-end-column="22" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="traceback.py" pinned="false" current-in-tab="false">
-        <entry file="file://C:/Python35/Lib/traceback.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="110" column="12" selection-start-line="110" selection-start-column="12" selection-end-line="110" selection-end-column="12" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="errorhandler.py" pinned="false" current-in-tab="false">
-        <entry file="file://C:/Python35/Lib/site-packages/selenium/webdriver/remote/errorhandler.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="193" column="0" selection-start-line="193" selection-start-column="0" selection-end-line="193" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="statistics.py" pinned="false" current-in-tab="false">
-        <entry file="file://C:/Python35/Lib/statistics.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="349" column="0" selection-start-line="349" selection-start-column="0" selection-end-line="349" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="element.py" pinned="false" current-in-tab="false">
-        <entry file="file://C:/Python35/Lib/site-packages/bs4/element.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="996" column="0" selection-start-line="996" selection-start-column="0" selection-end-line="996" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="test.html" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/test.html">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="-0.0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="db_writer.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/db_writer.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding />
             </state>
           </provider>
         </entry>
@@ -144,8 +80,8 @@
         <option value="$PROJECT_DIR$/reddit.db" />
         <option value="$PROJECT_DIR$/db_writer.py" />
         <option value="$PROJECT_DIR$/reader.py" />
-        <option value="$PROJECT_DIR$/analysis.py" />
         <option value="$PROJECT_DIR$/bot.py" />
+        <option value="$PROJECT_DIR$/analysis.py" />
       </list>
     </option>
   </component>
@@ -188,10 +124,6 @@
               <option name="myItemId" value="" />
               <option name="myItemType" value="" />
             </PATH_ELEMENT>
-            <PATH_ELEMENT USER_OBJECT="reddit_bot">
-              <option name="myItemId" value="" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
           </PATH>
         </subPane>
       </pane>
@@ -213,6 +145,9 @@
     <property name="settings.editor.splitter.proportion" value="0.2" />
   </component>
   <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\tdelforge\Documents\GitHub\reddit_bot" />
+    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\tdelforge\Documents\GitHub\reddit_bot" />
       <recent name="D:\reddit_bot" />
@@ -266,6 +201,23 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="reddit_bot" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/db_writer.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <method />
+    </configuration>
+    <configuration default="false" name="analysis" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="reddit_bot" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/analysis.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
@@ -392,16 +344,18 @@
       <option name="USE_KEYWORD" value="false" />
       <method />
     </configuration>
-    <list size="3">
+    <list size="4">
       <item index="0" class="java.lang.String" itemvalue="Python.bot" />
       <item index="1" class="java.lang.String" itemvalue="Python.db_writer" />
       <item index="2" class="java.lang.String" itemvalue="Python.db_writer (1)" />
+      <item index="3" class="java.lang.String" itemvalue="Python.analysis" />
     </list>
     <recent_temporary>
-      <list size="3">
+      <list size="4">
         <item index="0" class="java.lang.String" itemvalue="Python.bot" />
-        <item index="1" class="java.lang.String" itemvalue="Python.db_writer (1)" />
-        <item index="2" class="java.lang.String" itemvalue="Python.db_writer" />
+        <item index="1" class="java.lang.String" itemvalue="Python.analysis" />
+        <item index="2" class="java.lang.String" itemvalue="Python.db_writer (1)" />
+        <item index="3" class="java.lang.String" itemvalue="Python.db_writer" />
       </list>
     </recent_temporary>
   </component>
@@ -456,12 +410,15 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/bot.py</url>
-          <line>187</line>
-          <option name="timeStamp" value="13" />
+          <url>file://$PROJECT_DIR$/analysis.py</url>
+          <line>238</line>
+          <option name="timeStamp" value="16" />
         </line-breakpoint>
       </breakpoints>
-      <option name="time" value="14" />
+      <breakpoints-dialog>
+        <breakpoints-dialog />
+      </breakpoints-dialog>
+      <option name="time" value="17" />
     </breakpoint-manager>
     <watches-manager />
   </component>
@@ -472,9 +429,9 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#191#206#0" expanded="true" />
-            <element signature="e#1447#2167#0" expanded="false" />
-            <element signature="e#2203#2328#0" expanded="false" />
-            <element signature="e#2364#2663#0" expanded="false" />
+            <element signature="e#1469#2189#0" expanded="false" />
+            <element signature="e#2225#2350#0" expanded="false" />
+            <element signature="e#2386#2685#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -525,9 +482,9 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#191#206#0" expanded="true" />
-            <element signature="e#1447#2167#0" expanded="false" />
-            <element signature="e#2203#2328#0" expanded="false" />
-            <element signature="e#2364#2663#0" expanded="false" />
+            <element signature="e#1469#2189#0" expanded="false" />
+            <element signature="e#2225#2350#0" expanded="false" />
+            <element signature="e#2386#2685#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -570,9 +527,9 @@
           <caret line="141" column="33" selection-start-line="141" selection-start-column="33" selection-end-line="141" selection-end-column="33" />
           <folding>
             <element signature="e#191#206#0" expanded="true" />
-            <element signature="e#1447#2167#0" expanded="false" />
-            <element signature="e#2203#2328#0" expanded="false" />
-            <element signature="e#2364#2663#0" expanded="false" />
+            <element signature="e#1469#2189#0" expanded="false" />
+            <element signature="e#2225#2350#0" expanded="false" />
+            <element signature="e#2386#2685#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -615,9 +572,9 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#191#206#0" expanded="true" />
-            <element signature="e#1447#2167#0" expanded="false" />
-            <element signature="e#2203#2328#0" expanded="false" />
-            <element signature="e#2364#2663#0" expanded="false" />
+            <element signature="e#1469#2189#0" expanded="false" />
+            <element signature="e#2225#2350#0" expanded="false" />
+            <element signature="e#2386#2685#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -677,14 +634,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/_pydev_imps/_pydev_execfile.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="14" column="22" selection-start-line="14" selection-start-column="22" selection-end-line="14" selection-end-column="22" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://C:/Python35/Lib/traceback.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -701,25 +650,38 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/_pydev_imps/_pydev_execfile.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.39273927">
+          <caret line="14" column="22" selection-start-line="14" selection-start-column="22" selection-end-line="14" selection-end-column="22" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/analysis.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="12" column="0" selection-start-line="12" selection-start-column="0" selection-end-line="12" selection-end-column="0" />
+        <state vertical-scroll-proportion="-15.24138">
+          <caret line="26" column="36" selection-start-line="26" selection-start-column="36" selection-end-line="26" selection-end-column="36" />
           <folding>
             <element signature="e#2#31#0" expanded="true" />
+            <element signature="e#1043#1294#0" expanded="false" />
+            <element signature="e#1837#2576#0" expanded="false" />
+            <element signature="e#2621#3255#0" expanded="false" />
+            <element signature="e#3294#4098#0" expanded="false" />
+            <element signature="e#6488#6820#0" expanded="false" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/bot.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.58925474">
-          <caret line="119" column="43" selection-start-line="119" selection-start-column="43" selection-end-line="119" selection-end-column="43" />
+        <state vertical-scroll-proportion="0.21287128">
+          <caret line="35" column="20" selection-start-line="35" selection-start-column="20" selection-end-line="35" selection-end-column="20" />
           <folding>
             <element signature="e#191#206#0" expanded="true" />
-            <element signature="e#1447#2167#0" expanded="false" />
-            <element signature="e#2203#2328#0" expanded="false" />
-            <element signature="e#2364#2663#0" expanded="false" />
+            <element signature="e#1469#2189#0" expanded="false" />
+            <element signature="e#2225#2350#0" expanded="false" />
+            <element signature="e#2386#2685#0" expanded="false" />
           </folding>
         </state>
       </provider>

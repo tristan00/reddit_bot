@@ -7,9 +7,32 @@ import time
 import re
 import datetime
 import statistics
+import operator
+import random
 
 
-subreddits = ['worldnews', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'news']
+subreddits = ['worldnews', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'news', 'politics', 'the_donald']
+
+class post():
+    def __init__(self, url, p_id):
+        self.url = url
+        self.p_id = p_id
+        self.comments = []
+
+class comment_data():
+    def __init__(self, soup):
+        self.soup = soup
+        self.text = self.soup.find('div', {'class':'md'}).text
+        self.time_str = self.soup.find('time')['datetime']
+        self.comment_timestamp = datetime.datetime.strptime(self.time_str,'%Y-%m-%dT%H:%M:%S+00:00').timestamp()
+
+        self.text = self.text.lower()
+        self.text = self.text.replace(r'\n','.')
+
+        self.sentences = re.split('[.!?]+',self.text)
+        self.comment_words = []
+        for i in self.sentences:
+            self.comment_words.extend(re.split('[ .!?]+',i))
 
 class reader():
     def __init__(self, subreddit, session):
@@ -31,6 +54,15 @@ class reader():
             self.get_post_list()
         self.name = temp
         self.write_posts_and_comments_to_db()
+
+
+    def get_subreddit(self):
+        s_list = []
+        conn = sqlite3.connect('reddit.db', timeout=10)
+        res = conn.execute('select * from subreddit')
+        for s in res:
+            s_list.append(s[0])
+        return random.choice(s_list)
 
     def put_sub_to_db(self):
         conn = sqlite3.connect('reddit.db')
@@ -117,10 +149,14 @@ class reader():
                         parent_id = c.find('a',{'data-event-action':'parent'})['href'].replace('#','')
                     except:
                         parent_id = None
+                    try:
+                        conn.execute('insert into comment values(?,?,?,?, ?,?)', (p[1].split('_')[0], comment_id.split('_')[1], parent_id,comment_date.timestamp(), comment_text,  comment_upvotes))
+                        print('inserted comment:', (p[1].split('_')[0], comment_id.split('_')[1], parent_id,comment_date.timestamp(), comment_text,  comment_upvotes))
+                        conn.commit()
+                    except:
+                        #add update
+                        pass
 
-                    conn.execute('insert into comment values(?,?,?,?, ?,?)', (p[1].split('_')[0], comment_id.split('_')[1], parent_id,comment_date.timestamp(), comment_text,  comment_upvotes))
-                    print('inserted comment:', (p[1].split('_')[0], comment_id.split('_')[1], parent_id,comment_date.timestamp(), comment_text,  comment_upvotes))
-                    conn.commit()
 
                 except:
                     pass
@@ -146,9 +182,6 @@ class reader():
     def strategy1(self):
         comment_min_len = 10
         min_comments = 2
-        comment_words = None
-        comment_to_respond_to = None
-        comment_to_respond_to_text= None
 
         #pick post, new post with high upvotes
         conn = sqlite3.connect('reddit.db')
@@ -160,10 +193,12 @@ class reader():
         p_id = None
 
         return_value= None
+        posts = []
         for p in ps:
             post_data = self.write_post(conn, p)
             p_url = post_data[3]
             p_id = post_data[0]
+            temp_post = post(p_url, p_id)
 
             print('p_id, P_url:', p_id, p_url)
             if p_url is None or p_id is None:
@@ -185,97 +220,101 @@ class reader():
             comment_dict = {}
             earliest_comment_timestamp = None
             second_earliest_comment_timestamp = None
+
+            #sort by timestamp
+            comments_clean = []
+
             for c in comments:
                 try:
-                    if len(c.find('div', {'class':'md'}).text.lower()) < comment_min_len:
+                    if len(c.find('div', {'class':'md'}).text.lower()) < comment_min_len or 'http' in c.find('div', {'class':'md'}).text.lower():
                         continue
-
-                    time_str = c.find('time')['datetime']
-                    comment_timestamp = datetime.datetime.strptime(time_str,'%Y-%m-%dT%H:%M:%S+00:00').timestamp()
-                    if earliest_comment_timestamp is None:
-                        earliest_comment_timestamp = comment_timestamp
-                    elif second_earliest_comment_timestamp is None and comment_timestamp > earliest_comment_timestamp:
-                        second_earliest_comment_timestamp = comment_timestamp
-                    elif second_earliest_comment_timestamp is None and comment_timestamp < earliest_comment_timestamp:
-                        second_earliest_comment_timestamp = earliest_comment_timestamp
-                        earliest_comment_timestamp = comment_timestamp
-
-                    comment_dict[comment_timestamp] = c
+                    else:
+                        comments_clean.append(comment_data(c))
                 except:
-                    traceback.print_exc()
+                    pass
+            comments_clean.sort(key = operator.attrgetter('comment_timestamp'), reverse = True)
+            temp_post.comments=comments_clean
+            posts.append(temp_post)
 
-
-            comment_to_respond_to = comment_dict[earliest_comment_timestamp]
-
-            comment_to_respond_to_text= comment_to_respond_to.find('div', {'class':'md'}).text.lower()
-            comment_to_respond_to_text = comment_to_respond_to_text.replace(r'\n','.')
-            comment_words = re.split('[.!?]+',comment_to_respond_to_text)
-            break
-
-
-        #run dict maker only accepting sentences that share words with title and/or post
-        print(p_url, p_id, comment_to_respond_to_text)
-
-        if p_url is None or p_id is None:
-            return_value = 'null pid'
-            return
-
-        res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
-
-        for r in res:
-            text_post = r[2].replace(r'\n','.')
-            text_post = text_post.lower()
-            relevant = False
-            for w in comment_words:
-                if w in text_post:
-                    relevant = True
-            if relevant:
-                continue
-
-            sentences = re.split('[.!?]*',text_post)
-
-            sentences2 = []
-            for s in sentences:
-                if len(s) >1:
-                    sentences2.append(s)
-
-            for s in sentences2:
-                formatted_string = s.lower().strip()
-                print('formatted string', formatted_string)
-                normalized_sentence = formatted_string
-                if len(formatted_string) < comment_min_len:
+        replied = False
+        for p in posts:
+            #run dict maker only accepting sentences that share words with title and/or post
+            for c in p.comments:
+                try:
+                    print(p.url, p.p_id, p.comments[1].text)
+                except:
+                    continue
+                if p.url is None or p.p_id is None:
                     continue
 
-                try:
-                    if normalized_sentence in self.sentence_dict.keys():
-                        temp_list = self.sentence_dict[normalized_sentence][0]
-                        temp_list.append(int(r[3]))
-                        self.sentence_dict[normalized_sentence] = (temp_list, r[0], r[4])
-                        print(s, self.sentence_dict[normalized_sentence])
-                    else:
-                        self.sentence_dict[normalized_sentence] = ([int(r[3])], r[0], r[4])
+                res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
 
+                for r in res:
+                    text_post = r[2].replace(r'\n','.')
+                    text_post = text_post.lower()
+                    relevant = False
+                    for w in c.comment_words:
+                        if w in text_post:
+                            relevant = True
+                    if not relevant:
+                        continue
+
+                    sentences = re.split('[.!?]*',text_post)
+
+                    sentences2 = []
+                    for s in sentences:
+                        if len(s) >1:
+                            sentences2.append(s)
+
+                    if len(sentences2) < 2:
+                        continue
+
+                    for s in sentences2:
+                        formatted_string = s.lower().strip()
+                        print('formatted string', formatted_string)
+                        normalized_sentence = formatted_string
+                        if len(formatted_string) < comment_min_len:
+                            continue
+
+                        try:
+                            if normalized_sentence in self.sentence_dict.keys():
+                                temp_list = self.sentence_dict[normalized_sentence][0]
+                                temp_list.append(int(r[3]))
+                                self.sentence_dict[normalized_sentence] = (temp_list, r[0], r[4])
+                                print(s, self.sentence_dict[normalized_sentence])
+                            else:
+                                self.sentence_dict[normalized_sentence] = ([int(r[3])], r[0], r[4])
+
+                        except:
+                            #to do, fix key error
+                            traceback.print_exc()
+
+                current_comment = None
+                max_median = 0
+
+                try:
+                    print('num of keys: ', len(self.sentence_dict.keys()))
+                    for i in self.sentence_dict.keys():
+                        print(self.sentence_dict[i][0])
+                        if ( 'http' not in self.sentence_dict[i][0]):
+                            if(max_median < statistics.median(self.sentence_dict[i][0]) and len(self.sentence_dict[i][0]) > 5):
+                                max_median = statistics.median(self.sentence_dict[i][0])
+                                current_comment = i
+                                print('current_comment: ', current_comment)
+
+
+
+                    print('median: ', statistics.median(self.sentence_dict[current_comment][0]), self.sentence_dict[current_comment][0])
+                    print('current comment text:', current_comment)
+                    print('p_id:',p_id)
+                    print('parent comment:')
+                    print('returning:', ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], current_comment + '.'))
+                    #put optimal number of sentences and post it as response
+                    return ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], current_comment + '.')
                 except:
-                    #to do, fix key error
                     traceback.print_exc()
 
-        current_comment = None
-        max_median = 0
-        print('num of keys: ', len(self.sentence_dict.keys()))
-        for i in self.sentence_dict.keys():
-            if(max_median < statistics.median(self.sentence_dict[i][0])):
-                max_median = statistics.median(self.sentence_dict[i][0])
-                current_comment = i
-                print('current_comment: ', current_comment)
-
-
-        print('median: ', statistics.median(self.sentence_dict[current_comment][0]), self.sentence_dict[current_comment][0])
-        print('current comment text:', current_comment)
-        print('p_id:',p_id)
-        print('parent comment:', ' '.join(comment_words))
-        print('returning:', ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], current_comment + '.'))
-        #put optimal number of sentences and post it as response
-        return ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], current_comment + '.')
+        return None
 
     def pick_strategy_and_sub(self):
         results = self.strategy1()

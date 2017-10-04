@@ -33,6 +33,8 @@ class bot:
         self.user = user_name
         self.password = password
         self.session = get_session()
+        self.login()
+
         self.sub = None
         self.uh = None
         self.driver = None
@@ -40,7 +42,7 @@ class bot:
         self.subreddit = self.get_subreddit()
         self.main_reader = analysis.reader(self.subreddit, self.session)
         self.result = self.main_reader.pick_strategy_and_sub()
-        self.post_comment(self.result[0], self.result[1])
+        self.strat_picker(self.result[0], self.result[1])
         #self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
 
     def get_subreddit(self):
@@ -107,8 +109,16 @@ class bot:
         print(r.status_code)
 
 
-    #temporary
+    def strat_picker(self, url, text):
 
+        for i in range(0,5):
+            try:
+                self.post_comment(url, text)
+                break
+            except:
+                traceback.print_exc()
+
+    #temporary
     def post_comment(self, parent_url, text):
         self.driver = webdriver.Chrome()
         self.login_driver()
