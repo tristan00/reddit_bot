@@ -32,6 +32,7 @@ class response_word_graph():
 
 class node():
     def __init__(self, content):
+        self.max_length = -100
         self.content = content.lower()
         self.edges = {}
         self.average = 0
@@ -44,12 +45,12 @@ class node():
 
     def get_edge_median(self, in_word):
         if in_word in self.edges.keys():
-            return statistics.median(self.edges[in_word])
+            return statistics.median(self.edges[in_word][self.max_length:])
         return 0
 
     def get_edge_mean(self, in_word):
         if in_word in self.edges.keys():
-            return statistics.mean(self.edges[in_word])
+            return statistics.mean(self.edges[in_word][self.max_length:])
         return 0
 
 

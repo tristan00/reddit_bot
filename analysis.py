@@ -10,7 +10,7 @@ import operator
 import random
 import neural_network
 
-subreddits = ['Askreddit', 'news','the_donald','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'aww', 'gifs', 'wtf', 'nsfw']
+subreddits = ['Askreddit', 'news','the_donald','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'aww', 'gifs', 'mma']
 
 class post():
     def __init__(self, url, p_id):
@@ -162,6 +162,18 @@ class reader():
         except:
             traceback.print_exc()
 
+    def comment_similarity(self, c1, c2):
+        c1_word = list(re.split(r'[^a-zA-Z0-9]+',c1.lower()))
+        c2_words = list(re.split(r'[^a-zA-Z0-9]+', c2.lower()))
+
+        value1 = 0
+        for i in c1_word:
+            if i in c2_words:
+                c2_words.remove(i)
+
+        return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
+
+
     def write_posts_and_comments_to_db(self):
         conn = sqlite3.connect('reddit.db')
 
@@ -182,13 +194,14 @@ class reader():
         conn = sqlite3.connect('reddit.db')
 
         if sub is None:
-            res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text from comment a join comment b on a.parent_id = b.comment_id')
+            res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp from comment a join comment b on a.parent_id = b.comment_id order by a.timestamp')
         else:
             #TODO: add subreddit specific learning
             res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text from comment a join comment b on a.parent_id = b.comment_id')
 
-
-        for r in res.fetchall():
+        result_list = res.fetchall()
+        print('num of results:', len(result_list))
+        for r in result_list:
             child_words = re.split(r'[^a-zA-Z0-9]+',r[3].lower())
             parent_words = re.split(r'[^a-zA-Z0-9]+',r[5].lower())
             for i in child_words:
@@ -197,15 +210,13 @@ class reader():
                         g.add_item(j, i, int(r[4]))
                     except:
                         traceback.print_exc()
-            print('graph has read sentence:', r[3])
         conn.close()
         return g
 
     def strategy1(self):
         comment_min_len = 10
         min_comments = 2
-        min_relevance_threshold = .2
-        max_relevance_threshold = .9
+        similarity_threshold = .9
         results = []
         print("Starting learning words")
         g = self.build_response_word_graph(None)
@@ -236,18 +247,12 @@ class reader():
             r = self.session.get('https://www.reddit.com' + p_url)
             soup = BeautifulSoup(r.text,'html.parser')
             comment_table = soup.find('div', {'class':'sitetable nestedlisting'})
-            print('comment table: ', comment_table.attrs, comment_table)
             comments = comment_table.find_all('div', {'class': re.compile("entry unvoted.*")})
-            print('num of comments: ', len(comments))
             if len(comments) < min_comments:
                 return_value = 'Not enough comments'
                 continue
             else:
                 return_value = None
-
-            comment_dict = {}
-            earliest_comment_timestamp = None
-            second_earliest_comment_timestamp = None
 
             #sort by timestamp
             comments_clean = []
@@ -268,68 +273,39 @@ class reader():
         for p in posts:
             #run dict maker only accepting sentences that share words with title and/or post
             for c in p.comments:
-
                 self.sentence_dict = {}
-                try:
-                    print(p.url, p.p_id, p.comments[1].text)
-                except:
-                    continue
                 if p.url is None or p.p_id is None:
                     continue
 
                 res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
 
+                sorting_structure = []
                 for r in res:
                     text_post = r[2]
                     text_post = text_post.lower()
-
-                    formatted_string = text_post.lower().strip()
-                    print('formatted string', formatted_string)
-                    normalized_sentence = formatted_string
-                    if len(formatted_string) < comment_min_len:
+                    normalized_sentence = text_post.lower().strip()
+                    if len(normalized_sentence) < comment_min_len:
                         continue
 
                     implied_score = g.values_statement(c.text, r[2])
-                    try:
-                        if normalized_sentence in self.sentence_dict.keys():
-                            temp_list = self.sentence_dict[normalized_sentence][0]
-                            templist2= self.sentence_dict[normalized_sentence][4]
-                            temp_list.append(int(r[3]))
-                            templist2.append(text_post)
-                            self.sentence_dict[normalized_sentence] = (temp_list, r[0], r[4], implied_score, templist2)
-                        else:
-                            self.sentence_dict[normalized_sentence] = ([int(r[3])], r[0], r[4], implied_score, [text_post])
 
-                    except:
-                        #to do, fix key error
-                        traceback.print_exc()
+                    if 'http' not in text_post and self.comment_similarity(text_post, c.text)<similarity_threshold:
+                        sorting_structure.append((r[0], r[4], implied_score, text_post))
 
-                current_comment = None
+                sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
+                current_comment = sorting_structure[0]
 
-                max_implied_score = 0
                 try:
-                    print('num of keys: ', len(self.sentence_dict.keys()))
-                    for i in self.sentence_dict.keys():
-                        print(self.sentence_dict[i][0])
-                        if ('http' not in self.sentence_dict[i][0]):
-                            if(max_implied_score < self.sentence_dict[i][3]):
-                                max_implied_score = self.sentence_dict[i][3]
-                                current_comment = i
-                                print('current_comment: ', current_comment)
-
-                    sentence_tuples = zip(self.sentence_dict[current_comment][0],self.sentence_dict[current_comment][4])
-                    sorted(sentence_tuples, key=operator.itemgetter(0))
-
-                    print('median: ', statistics.median(self.sentence_dict[current_comment][0]))
-                    print('sentence: ', list(sentence_tuples)[0])
-                    print('current comment text:', list(sentence_tuples)[0][1])
+                    print('score: ', sorting_structure[0][1])
                     print('p_id:',p_id)
-                    print('returning:', ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1]))
+                    print('parent comment:', c.text)
+                    print('intended comment:', current_comment[3])
+                    print('returning:', ('https://www.reddit.com'+current_comment[1] + current_comment[0], current_comment[3], current_comment[2]))
                     #put optimal number of sentences and post it as response
-                    results.append(('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1], implied_score))#full url, text, expected value
+                    results.append(('https://www.reddit.com'+current_comment[1] + current_comment[0], current_comment[3], current_comment[2]))#full url, text, expected value
                 except:
                     traceback.print_exc()
-        sorted(results, key=operator.itemgetter(2))
+        results.sort(key=operator.itemgetter(2), reverse=True)
         return results
 
     def pick_strategy_and_sub(self, num):

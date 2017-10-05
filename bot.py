@@ -1,4 +1,7 @@
 #to do
+#find out why it repeats solutions
+#add commenting updates
+#get log to update
 #switch data analysis to panda
 #add strategy picking functionalioty
 
@@ -38,11 +41,13 @@ class bot:
         self.main_reader = analysis.reader(self.session)
 
         for i in range(1):
+            self.results = []
             self.main_reader.read_all()
             self.main_reader.reset_subreddit()
-            self.results=self.main_reader.pick_strategy_and_sub(1)
+            self.results.extend(self.main_reader.pick_strategy_and_sub(1))
             for j in self.results:
-                self.post_comment(self.results[0], self.results[1])
+                print(self.results)
+                self.post_comment(self.results[0][0], self.results[0][1])
             time.sleep(600)
         #self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
 
@@ -103,7 +108,6 @@ class bot:
         r = self.session.post(login_url, data = post_data)
         print(post_data)
         print(r.status_code)
-
 
     #temporary
     def post_comment(self, parent_url, text):
