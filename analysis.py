@@ -51,7 +51,7 @@ class reader():
             self.name = i
             self.get_post_list()
         self.name = temp
-        self.write_posts_and_comments_to_db()
+        #self.write_posts_and_comments_to_db()
 
     def reset_subreddit(self):
         s_list = []
