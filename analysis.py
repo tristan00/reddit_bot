@@ -1,5 +1,4 @@
 
-
 from bs4 import BeautifulSoup
 import traceback
 import sqlite3
@@ -9,9 +8,9 @@ import datetime
 import statistics
 import operator
 import random
+import neural_network
 
-
-subreddits = ['worldnews', 'funny', 'aww', 'pics', 'wtf','ImGoingToHellForThis', 'news', 'politics', 'the_donald']
+subreddits = ['Askreddit', 'news','the_donald','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'aww', 'gifs', 'wtf', 'nsfw']
 
 class post():
     def __init__(self, url, p_id):
@@ -177,11 +176,30 @@ class reader():
         conn.commit()
         conn.close()
 
+    def build_response_word_graph(self, sub):
+        g = neural_network.response_word_graph()
+        conn = sqlite3.connect('reddit.db')
+
+        if sub is None:
+            res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text from comment a join comment b on a.parent_id = b.comment_id')
+            for r in res:
+                child_words = re.split(r'[^a-zA-Z0-9]+',r[3].lower())
+                parent_words = re.split(r'[^a-zA-Z0-9]+',r[5].lower())
+                for i in child_words:
+                    for j in parent_words:
+                        try:
+                            g.add_item(j, i, int(r[4]))
+                        except:
+                            traceback.print_exc()
+        return g
+
     def strategy1(self):
         comment_min_len = 10
         min_comments = 2
         min_relevance_threshold = .2
         max_relevance_threshold = .9
+        results = []
+        g = self.build_response_word_graph(self, None)
 
         #pick post, new post with high upvotes
         conn = sqlite3.connect('reddit.db')
@@ -254,14 +272,6 @@ class reader():
                 for r in res:
                     text_post = r[2]
                     text_post = text_post.lower()
-                    relevance =0
-                    for w in c.comment_words:
-                        if w in text_post:
-                            relevance +=  True
-                    if relevance < min_relevance_threshold or relevance > max_relevance_threshold:
-                        continue
-
-
 
                     formatted_string = text_post.lower().strip()
                     print('formatted string', formatted_string)
@@ -269,15 +279,16 @@ class reader():
                     if len(formatted_string) < comment_min_len:
                         continue
 
+                    implied_score = g.values_statement(c.text, r[2])
                     try:
                         if normalized_sentence in self.sentence_dict.keys():
                             temp_list = self.sentence_dict[normalized_sentence][0]
                             templist2= self.sentence_dict[normalized_sentence][4]
                             temp_list.append(int(r[3]))
                             templist2.append(text_post)
-                            self.sentence_dict[normalized_sentence] = (temp_list, r[0], r[4], relevance, templist2)
+                            self.sentence_dict[normalized_sentence] = (temp_list, r[0], r[4], implied_score, templist2)
                         else:
-                            self.sentence_dict[normalized_sentence] = ([int(r[3])], r[0], r[4], relevance, [text_post])
+                            self.sentence_dict[normalized_sentence] = ([int(r[3])], r[0], r[4], implied_score, [text_post])
 
                     except:
                         #to do, fix key error
@@ -285,6 +296,7 @@ class reader():
 
                 current_comment = None
                 max_median = 0
+
 
                 try:
                     print('num of keys: ', len(self.sentence_dict.keys()))
@@ -295,7 +307,7 @@ class reader():
                                 max_median = statistics.median(self.sentence_dict[i][0])
                                 current_comment = i
                                 print('current_comment: ', current_comment)
-
+                    implied_score = self.sentence_dict[current_comment][3]
 
                     sentence_tuples = zip(self.sentence_dict[current_comment][0],self.sentence_dict[current_comment][4])
                     sorted(sentence_tuples, key=operator.itemgetter(0))
@@ -307,13 +319,16 @@ class reader():
                     print('parent comment:')
                     print('returning:', ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1]))
                     #put optimal number of sentences and post it as response
-                    return ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1])
+                    results.append(('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1], implied_score))#full url, text, expected value
                 except:
                     traceback.print_exc()
-
-        return None
-
-    def pick_strategy_and_sub(self):
-        results = self.strategy1()
+        sorted(results, key=operator.itemgetter(2))
         return results
+
+    def pick_strategy_and_sub(self, num):
+        results = self.strategy1()
+
+        for i in results:
+            print(i)
+        return results[0:num]
 

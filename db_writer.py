@@ -11,12 +11,12 @@ c = conn.cursor()
 #c.execute('create table if not exists {0} (user_name text, password text)'.format('reddit_logins'))
 #c.execute('insert into reddit_logins values(?,?)', ('dataphobes', 'SVUhgJCTZrPBeN2U'))
 
-c.execute('create table if not exists {0} (sub_name TEXT PRIMARY KEY)'.format('subreddit'))
-c.execute('insert into subreddit values(?)', ('aww',))
-c.execute('insert into subreddit values(?)', ('worldnews',))
+#c.execute('create table if not exists {0} (sub_name TEXT PRIMARY KEY)'.format('subreddit'))
+#c.execute('insert into subreddit values(?)', ('aww',))
+#c.execute('insert into subreddit values(?)', ('worldnews',))
 #c.execute('insert into subredit values(?)', ('funny',))
 conn.commit()
-res = c.execute('select * from reddit_logins')
+res = c.execute('select * from comment')
 for i in res:
     print(i)
 
