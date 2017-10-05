@@ -112,7 +112,6 @@ class reader():
                 tries -= 1
                 #fix
 
-
     def write_comments(self, p, conn):
         try:
             r = self.session.get('https://www.reddit.com' + p[0])
@@ -152,27 +151,14 @@ class reader():
                         print('inserted comment:', (p[1].split('_')[0], comment_id.split('_')[1], parent_id,comment_date.timestamp(), comment_text,  comment_upvotes))
                         conn.commit()
                     except:
-                        #add update
+                        conn.execute('update comment set upvotes = ? where comment_id = ?', (upvotes, comment_id.split('_')[1],))
+                        conn.commit()
                         pass
-
-
                 except:
                     pass
                     #traceback.print_exc()
         except:
             traceback.print_exc()
-
-    def comment_similarity(self, c1, c2):
-        c1_word = list(re.split(r'[^a-zA-Z0-9]+',c1.lower()))
-        c2_words = list(re.split(r'[^a-zA-Z0-9]+', c2.lower()))
-
-        value1 = 0
-        for i in c1_word:
-            if i in c2_words:
-                c2_words.remove(i)
-
-        return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
-
 
     def write_posts_and_comments_to_db(self):
         conn = sqlite3.connect('reddit.db')
@@ -202,8 +188,8 @@ class reader():
         result_list = res.fetchall()
         print('num of results:', len(result_list))
         for r in result_list:
-            child_words = re.split(r'[^a-zA-Z0-9]+',r[3].lower())
-            parent_words = re.split(r'[^a-zA-Z0-9]+',r[5].lower())
+            child_words = split_comments(r[3])
+            parent_words = split_comments(r[5])
             for i in child_words:
                 for j in parent_words:
                     try:
@@ -274,6 +260,10 @@ class reader():
             #run dict maker only accepting sentences that share words with title and/or post
             for c in p.comments:
                 self.sentence_dict = {}
+
+                comment_id = c.soup.find('input', {'name':'thing_id'})['value'].split('_')[1]
+                comment_permalink = None
+
                 if p.url is None or p.p_id is None:
                     continue
 
@@ -287,9 +277,9 @@ class reader():
                     if len(normalized_sentence) < comment_min_len:
                         continue
 
-                    implied_score = g.values_statement(c.text, r[2])
+                    implied_score = g.values_statement(split_comments(c.text), split_comments(r[2]))
 
-                    if 'http' not in text_post and self.comment_similarity(text_post, c.text)<similarity_threshold:
+                    if 'http' not in text_post and comment_similarity(text_post, c.text)<similarity_threshold:
                         sorting_structure.append((r[0], r[4], implied_score, text_post))
 
                 sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
@@ -297,12 +287,12 @@ class reader():
 
                 try:
                     print('score: ', sorting_structure[0][1])
-                    print('p_id:',p_id)
+                    print('post:', p.url)
                     print('parent comment:', c.text)
                     print('intended comment:', current_comment[3])
-                    print('returning:', ('https://www.reddit.com'+current_comment[1] + current_comment[0], current_comment[3], current_comment[2]))
+                    print('returning:', ('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))
                     #put optimal number of sentences and post it as response
-                    results.append(('https://www.reddit.com'+current_comment[1] + current_comment[0], current_comment[3], current_comment[2]))#full url, text, expected value
+                    results.append(('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))#full url, text, expected value
                 except:
                     traceback.print_exc()
         results.sort(key=operator.itemgetter(2), reverse=True)
@@ -315,3 +305,25 @@ class reader():
             print(i)
         return results[0:num]
 
+
+def comment_similarity(c1, c2):
+    c1_word = list(re.split(r'[^a-zA-Z0-9]+',c1.lower()))
+    c2_words = list(re.split(r'[^a-zA-Z0-9]+', c2.lower()))
+
+    value1 = 0
+    for i in c1_word:
+        if i in c2_words:
+            c2_words.remove(i)
+
+    return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
+
+def split_comments(c1):
+    c1_word = list(re.split(r"[^a-zA-Z0-9']+",c1.lower()))
+
+    res = []
+    value1 = 0
+    for i in c1_word:
+        if len(i)>2:
+            res.append(i)
+
+    return res

@@ -42,13 +42,13 @@ class bot:
 
         for i in range(1):
             self.results = []
-            self.main_reader.read_all()
+            #self.main_reader.read_all()
             self.main_reader.reset_subreddit()
             self.results.extend(self.main_reader.pick_strategy_and_sub(1))
             for j in self.results:
                 print(self.results)
                 self.post_comment(self.results[0][0], self.results[0][1])
-            time.sleep(600)
+                time.sleep(600)
         #self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
 
     def write_new_data_log(self,url, text):

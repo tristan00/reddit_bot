@@ -13,9 +13,7 @@ class response_word_graph():
         else:
             self.child_nodes[child_word].edges[parent_word].append(value)
 
-    def values_statement(self, parent_str, child_str):
-        child_words = re.split(r'[^a-zA-Z0-9]+',child_str.lower())
-        parent_words = re.split(r'[^a-zA-Z0-9]+',parent_str.lower() )
+    def values_statement(self, parent_words, child_words):
 
         child_words_value = []
         for w in child_words:
@@ -33,6 +31,7 @@ class response_word_graph():
 class node():
     def __init__(self, content):
         self.max_length = -100
+        self.min_length = 5
         self.content = content.lower()
         self.edges = {}
         self.average = 0
@@ -44,12 +43,12 @@ class node():
         return 0
 
     def get_edge_median(self, in_word):
-        if in_word in self.edges.keys():
+        if in_word in self.edges.keys() and len(self.edges[in_word]) > self.min_length:
             return statistics.median(self.edges[in_word][self.max_length:])
         return 0
 
     def get_edge_mean(self, in_word):
-        if in_word in self.edges.keys():
+        if in_word in self.edges.keys() and len(self.edges[in_word]) > self.min_length:
             return statistics.mean(self.edges[in_word][self.max_length:])
         return 0
 
