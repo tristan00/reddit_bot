@@ -17,8 +17,10 @@ c = conn.cursor()
 #c.execute('insert into subredit values(?)', ('funny',))
 conn.commit()
 res = c.execute('select * from comment')
+#print(len(list(res)))
 for i in res:
     print(i)
+
 
 
 

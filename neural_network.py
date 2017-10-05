@@ -21,7 +21,11 @@ class response_word_graph():
         for w in child_words:
             temp_value = []
             for w2 in parent_words:
-                temp_value.append(self.child_nodes[w].get_edge_mean(w2))
+                try:
+                    temp_value.append(self.child_nodes[w].get_edge_mean(w2))
+                except:
+                    #key error
+                    temp_value.append(0)
             child_words_value.append(statistics.mean(temp_value))
 
         return sum(child_words_value)/max(len(child_words),len(parent_words))

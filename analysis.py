@@ -51,7 +51,7 @@ class reader():
             self.name = i
             self.get_post_list()
         self.name = temp
-        #self.write_posts_and_comments_to_db()
+        self.write_posts_and_comments_to_db()
 
     def reset_subreddit(self):
         s_list = []
@@ -60,6 +60,7 @@ class reader():
         for s in res:
             s_list.append(s[0])
         self.name= random.choice(s_list)
+        conn.close()
 
     def put_sub_to_db(self):
         conn = sqlite3.connect('reddit.db')
@@ -182,15 +183,22 @@ class reader():
 
         if sub is None:
             res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text from comment a join comment b on a.parent_id = b.comment_id')
-            for r in res:
-                child_words = re.split(r'[^a-zA-Z0-9]+',r[3].lower())
-                parent_words = re.split(r'[^a-zA-Z0-9]+',r[5].lower())
-                for i in child_words:
-                    for j in parent_words:
-                        try:
-                            g.add_item(j, i, int(r[4]))
-                        except:
-                            traceback.print_exc()
+        else:
+            #TODO: add subreddit specific learning
+            res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text from comment a join comment b on a.parent_id = b.comment_id')
+
+
+        for r in res.fetchall():
+            child_words = re.split(r'[^a-zA-Z0-9]+',r[3].lower())
+            parent_words = re.split(r'[^a-zA-Z0-9]+',r[5].lower())
+            for i in child_words:
+                for j in parent_words:
+                    try:
+                        g.add_item(j, i, int(r[4]))
+                    except:
+                        traceback.print_exc()
+            print('graph has read sentence:', r[3])
+        conn.close()
         return g
 
     def strategy1(self):
@@ -199,11 +207,13 @@ class reader():
         min_relevance_threshold = .2
         max_relevance_threshold = .9
         results = []
-        g = self.build_response_word_graph(self, None)
+        print("Starting learning words")
+        g = self.build_response_word_graph(None)
+        print('Finished learning.')
 
         #pick post, new post with high upvotes
         conn = sqlite3.connect('reddit.db')
-        r = self.session.get('https://www.reddit.com/r/{0}/rising'.format(self.name))
+        r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(self.name))
         soup = BeautifulSoup(r.text,'html.parser')
         ps = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
@@ -295,28 +305,25 @@ class reader():
                         traceback.print_exc()
 
                 current_comment = None
-                max_median = 0
 
-
+                max_implied_score = 0
                 try:
                     print('num of keys: ', len(self.sentence_dict.keys()))
                     for i in self.sentence_dict.keys():
                         print(self.sentence_dict[i][0])
-                        if ( 'http' not in self.sentence_dict[i][0]):
-                            if(max_median < statistics.median(self.sentence_dict[i][0]) and len(self.sentence_dict[i][0]) > 10):
-                                max_median = statistics.median(self.sentence_dict[i][0])
+                        if ('http' not in self.sentence_dict[i][0]):
+                            if(max_implied_score < self.sentence_dict[i][3]):
+                                max_implied_score = self.sentence_dict[i][3]
                                 current_comment = i
                                 print('current_comment: ', current_comment)
-                    implied_score = self.sentence_dict[current_comment][3]
 
                     sentence_tuples = zip(self.sentence_dict[current_comment][0],self.sentence_dict[current_comment][4])
                     sorted(sentence_tuples, key=operator.itemgetter(0))
 
                     print('median: ', statistics.median(self.sentence_dict[current_comment][0]))
-                    print('sentence: ', sentence_tuples[0])
-                    print('current comment text:', sentence_tuples[0][1])
+                    print('sentence: ', list(sentence_tuples)[0])
+                    print('current comment text:', list(sentence_tuples)[0][1])
                     print('p_id:',p_id)
-                    print('parent comment:')
                     print('returning:', ('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1]))
                     #put optimal number of sentences and post it as response
                     results.append(('https://www.reddit.com'+self.sentence_dict[current_comment][2] + self.sentence_dict[current_comment][1], sentence_tuples[0][1], implied_score))#full url, text, expected value

@@ -51,6 +51,7 @@ class bot:
         conn = sqlite3.connect('reddit.db')
         conn.execute('create table if not exists {0} (url TEXT, parent_url text primary key, subreddit text, strat int, result int)'.format('log'))
         conn.execute('insert into log values (?,?,?,?,?)',(None, url,self.main_reader.name, 1,None))
+        conn.close()
 
     def login(self):
         try_counter = 3
