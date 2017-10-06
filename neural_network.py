@@ -20,7 +20,7 @@ class response_word_graph():
             temp_value = []
             for w2 in parent_words:
                 try:
-                    temp_value.append(self.child_nodes[w].get_edge_mean(w2))
+                    temp_value.append(self.child_nodes[w].get_edge_median(w2))
                 except:
                     #key error
                     temp_value.append(0)
@@ -31,7 +31,7 @@ class response_word_graph():
 class node():
     def __init__(self, content):
         self.max_length = -100
-        self.min_length = 5
+        self.min_length = 2
         self.content = content.lower()
         self.edges = {}
         self.average = 0
@@ -43,13 +43,13 @@ class node():
         return 0
 
     def get_edge_median(self, in_word):
-        if in_word in self.edges.keys() and len(self.edges[in_word]) > self.min_length:
-            return statistics.median(self.edges[in_word][self.max_length:])
+        if in_word in self.edges.keys() and len(self.edges[in_word])>self.min_length:
+            return statistics.median(self.edges[in_word])
         return 0
 
     def get_edge_mean(self, in_word):
-        if in_word in self.edges.keys() and len(self.edges[in_word]) > self.min_length:
-            return statistics.mean(self.edges[in_word][self.max_length:])
+        if in_word in self.edges.keys() and len(self.edges[in_word])>self.min_length:
+            return statistics.mean(self.edges[in_word])
         return 0
 
 

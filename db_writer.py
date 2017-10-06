@@ -16,11 +16,11 @@ c = conn.cursor()
 #c.execute('insert into subreddit values(?)', ('worldnews',))
 #c.execute('insert into subredit values(?)', ('funny',))
 #conn.commit()
-#res = c.execute('select * from comment')
-res = c.execute("SELECT * FROM sqlite_master WHERE type='table';")
-#print(len(list(res)))
-for i in res:
-    print(i)
+res = c.execute('select * from comment')
+#res = c.execute("SELECT * FROM sqlite_master WHERE type='table';")
+print(len(list(res)))
+#for i in res:
+#    print(i)
 
 #a = [1,2,3]
 #print(a[-10:0])

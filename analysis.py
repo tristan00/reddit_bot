@@ -9,8 +9,9 @@ import statistics
 import operator
 import random
 import neural_network
+import math
 
-subreddits = ['Askreddit', 'news','the_donald','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'aww', 'gifs', 'mma']
+subreddits = ['Askreddit', 'news','the_donald','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'me_irl', 'aww', 'gifs', 'mma']
 
 class post():
     def __init__(self, url, p_id):
@@ -152,6 +153,7 @@ class reader():
                         conn.commit()
                     except:
                         conn.execute('update comment set upvotes = ? where comment_id = ?', (upvotes, comment_id.split('_')[1],))
+                        print('updated comment:', (p[1].split('_')[0], comment_id.split('_')[1], parent_id,comment_date.timestamp(), comment_text,  comment_upvotes))
                         conn.commit()
                         pass
                 except:
@@ -163,7 +165,7 @@ class reader():
     def write_posts_and_comments_to_db(self):
         conn = sqlite3.connect('reddit.db')
 
-        res = conn.execute('select distinct data_permalink, post_id from posts')
+        res = conn.execute('select distinct data_permalink, post_id from posts order by timestamp desc')
         for p in res:
             #continue
             time.sleep(3)
@@ -175,27 +177,30 @@ class reader():
         conn.commit()
         conn.close()
 
-    def build_response_word_graph(self, sub):
+    def build_response_graph(self, graph_type):
+        #graph types:
+        #1: analyzes comment response words
+        #2: analyzes title words
+
         g = neural_network.response_word_graph()
         conn = sqlite3.connect('reddit.db')
+        res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp, a.post_id from comment a join comment b on a.parent_id = b.comment_id order by a.timestamp')
 
-        if sub is None:
-            res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp from comment a join comment b on a.parent_id = b.comment_id order by a.timestamp')
-        else:
-            #TODO: add subreddit specific learning
-            res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text from comment a join comment b on a.parent_id = b.comment_id')
+        for r in res:
+            if (graph_type == 1):
+                child_words = split_comments(r[3])
+                parent_words = split_comments(r[5])
+            if (graph_type == 2):
+                child_words = split_comments(r[3])
+                parent_words = split_comments(r[7])
 
-        result_list = res.fetchall()
-        print('num of results:', len(result_list))
-        for r in result_list:
-            child_words = split_comments(r[3])
-            parent_words = split_comments(r[5])
             for i in child_words:
                 for j in parent_words:
                     try:
                         g.add_item(j, i, int(r[4]))
                     except:
                         traceback.print_exc()
+
         conn.close()
         return g
 
@@ -205,7 +210,8 @@ class reader():
         similarity_threshold = .9
         results = []
         print("Starting learning words")
-        g = self.build_response_word_graph(None)
+        g_comments = self.build_response_graph(1)
+        g_title = self.build_response_graph(2)
         print('Finished learning.')
 
         #pick post, new post with high upvotes
@@ -255,7 +261,8 @@ class reader():
             temp_post.comments=comments_clean
             posts.append(temp_post)
 
-        replied = False
+        possible_comment_list = list(conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id').fetchall())
+
         for p in posts:
             #run dict maker only accepting sentences that share words with title and/or post
             for c in p.comments:
@@ -267,20 +274,13 @@ class reader():
                 if p.url is None or p.p_id is None:
                     continue
 
-                res = conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink from posts join comment on posts.post_id = comment.post_id where subreddit = ?', (self.name,))
-
                 sorting_structure = []
-                for r in res:
-                    text_post = r[2]
-                    text_post = text_post.lower()
-                    normalized_sentence = text_post.lower().strip()
-                    if len(normalized_sentence) < comment_min_len:
-                        continue
+                for r in possible_comment_list:
+                    implied_reply_score = g_comments.values_statement(split_comments(c.text), split_comments(r[2]))
+                    implied_title_score = g_title.values_statement(split_comments(c.text),split_comments(r[6]))
 
-                    implied_score = g.values_statement(split_comments(c.text), split_comments(r[2]))
-
-                    if 'http' not in text_post and comment_similarity(text_post, c.text)<similarity_threshold:
-                        sorting_structure.append((r[0], r[4], implied_score, text_post))
+                    if 'http' not in r[2] and comment_similarity(r[2], c.text)<similarity_threshold:
+                        sorting_structure.append((r[0], r[4], math.sqrt((implied_reply_score*implied_reply_score) + (implied_title_score*implied_title_score)), r[2]))
 
                 sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
                 current_comment = sorting_structure[0]
