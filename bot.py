@@ -1,25 +1,340 @@
-#to do
-#find out why it repeats solutions
-#add commenting updates
+#to do:
 #get log to update
 #switch data analysis to panda
 #add strategy picking functionalioty
 
 import requests
 import json
-import random
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+import os
 from bs4 import BeautifulSoup
 import traceback
 import sqlite3
 import time
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-import analysis
-import os
+import re
+import datetime
+import statistics
+import operator
+import random
+import math
 
 main_bot = None
 sql_file = 'reddit_db.sqlite'
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
+subreddits = ['Askreddit', 'news','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'me_irl', 'aww', 'gifs', 'mma']
+random.shuffle(subreddits)
+
+class post():
+    def __init__(self, url, p_id):
+        self.url = url
+        self.p_id = p_id
+        self.comments = []
+
+class comment_data():
+    def __init__(self, soup, p_id):
+        self.soup = soup
+        self.p_id = p_id
+        self.text = self.soup.find('div', {'class':'md'}).text
+        self.time_str = self.soup.find('time')['datetime']
+        self.comment_timestamp = datetime.datetime.strptime(self.time_str,'%Y-%m-%dT%H:%M:%S+00:00').timestamp()
+        self.comment_words = split_comments(self.text)
+        self.comment_upvotes = soup.find('span',{'class':'score unvoted'})['title']
+        self.comment_id = soup.find('input', {'name':'thing_id'})['value']
+
+        try:
+            self.parent_id = soup.find('a',{'data-event-action':'parent'})['href'].replace('#','')
+        except:
+            self.parent_id = None
+
+    def toDB(self, conn):
+        try:
+            conn.execute('insert into comment values(?,?,?,?, ?,?)', (self.p_id.split('_')[0], self.comment_id.split('_')[1], self.parent_id, self.comment_timestamp, self.text,  self.comment_upvotes))
+            print('inserted comment:', (self.p_id.split('_')[0], self.comment_id.split('_')[1], self.parent_id, self.comment_timestamp, self.text,  self.comment_upvotes))
+            conn.commit()
+        except:
+            try:
+                conn.execute('update comment set upvotes = ? where comment_id = ?', (self.comment_upvotes, self.comment_id.split('_')[1],))
+                print('updated comment:', (self.p_id.split('_')[0], self.comment_id.split('_')[1], self.parent_id, self.comment_timestamp, self.text,  self.comment_upvotes))
+                conn.commit()
+            except:
+                traceback.print_exc()
+
+class reader():
+    def __init__(self, session):
+        self.name = ""
+        self.put_sub_to_db()
+        self.session = session
+        #self.write_posts_and_comments_to_db()
+
+        self.word_dict = {}
+        self.sentence_count_dict = {}
+
+    def read_all(self):
+        for i in subreddits:
+            print('reading posts in :', i)
+            self.get_post_list(i)
+        self.write_comments_to_db()
+
+    def put_sub_to_db(self):
+        conn = sqlite3.connect('reddit.db')
+        cursor = conn.cursor()
+
+        #TODO: create initial db creation code
+        cursor.execute('create table if not exists {0} (sub_name TEXT PRIMARY KEY)'.format('subreddit'))
+        cursor.execute('create table if not exists {0} (subreddit TEXT, post_id TEXT UNIQUE, post_title TEXT, timestamp TEXT, data_permalink TEXT, comment_count int, upvotes int)'.format('posts'))
+        cursor.execute('create table if not exists {0} (post_id TEXT, comment_id TEXT PRIMARY KEY, parent_id TEXT, timestamp TEXT, text TEXT, upvotes int)'.format('comment'))
+
+        conn.commit()
+        conn.close()
+
+    def write_post(self, conn, p):
+        #print(p.attrs)
+        try:
+            conn.execute('insert into posts values(?,?,?,?,?,?,?)', (self.name ,p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], 0, 0) )
+            print('Inserted post:', p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
+            return (p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
+        except:
+            return (None, None, None, None, None, None)
+
+    def get_post_list(self, subreddit):
+        conn = sqlite3.connect('reddit.db')
+        tries = 3
+        while tries >0:
+            time.sleep(3)
+            try:
+                r = self.session.get('https://www.reddit.com/r/{0}/'.format(subreddit))
+                soup = BeautifulSoup(r.text, "html.parser")
+
+                posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
+
+                print(len(posts))
+                for p in posts:
+                    self.write_post(conn, p)
+                conn.commit()
+                conn.close()
+                print('writing posts done')
+                conn.close()
+                break
+            except:
+                traceback.print_exc()
+                conn.close()
+                tries -= 1
+                #fix
+
+    def update_posts(self, soup, conn, p_id):
+        comment_count = soup.find('a',{'data-event-action':'comments'}).text.replace(',','').split(' ')[0]
+        upvotes = soup.find('span',{'class':'number'}).text.replace(',','')
+        conn.execute('update posts set upvotes = ? where post_id = ?', (upvotes, p_id,))
+        conn.execute('update posts set comment_count = ? where post_id = ?', (comment_count, p_id,))
+        return soup.find_all('div', {'class': re.compile("entry unvoted.*")})
+
+    def write_comments(self, p_url, p_id, conn):
+        r = self.session.get('https://www.reddit.com' + p_url)
+        soup = BeautifulSoup(r.text, "html.parser")
+        try:
+            self.update_posts(soup, conn, p_id)
+        except:
+            return
+        comment_soup = soup.find_all('div', {'class': re.compile("entry unvoted.*")})
+        comment_list = []
+        for c in comment_soup:
+            try:
+                comment_data(c, p_id).toDB(conn)
+            except:
+                pass
+                #traceback.print_exc()
+
+    def write_comments_to_db(self):
+        conn = sqlite3.connect('reddit.db')
+        res = conn.execute('select distinct data_permalink, post_id from posts order by timestamp desc')
+        #res = conn.execute('select distinct data_permalink, post_id from posts order by comment_count desc')
+        for p in res:
+            time.sleep(3)
+            print(p)
+            self.write_comments(p[0], p[1],conn)
+
+        print('writing comments done')
+        conn.commit()
+        conn.close()
+
+    def build_response_graph(self, graph_type):
+        #graph types:
+        #1: analyzes comment response words
+        #2: analyzes title words
+
+        g = response_word_graph()
+        conn = sqlite3.connect('reddit.db')
+        res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp, a.post_id from comment a join comment b on a.parent_id = b.comment_id order by a.timestamp')
+
+        for r in res:
+            if (graph_type == 1):
+                child_words = split_comments(r[3])
+                parent_words = split_comments(r[5])
+            if (graph_type == 2):
+                child_words = split_comments(r[3])
+                parent_words = split_comments(r[7])
+
+            for i in child_words:
+                for j in parent_words:
+                    try:
+                        g.add_item(j, i, int(r[4]))
+                    except:
+                        traceback.print_exc()
+        conn.close()
+        return g
+
+    def strategy1(self, subreddit, max_results):
+        comment_min_len = 10
+        min_comments = 2
+        similarity_threshold = .9
+        results = []
+        print("Starting learning words")
+        g_comments = self.build_response_graph(1)
+        g_title = self.build_response_graph(2)
+        print('Finished learning.')
+
+        #pick post, new post with high upvotes
+        conn = sqlite3.connect('reddit.db')
+        r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(subreddit))
+        soup = BeautifulSoup(r.text,'html.parser')
+        ps = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
+
+        p_url = None
+        p_id = None
+
+        return_value= None
+        posts = []
+        for p in ps:
+            post_data = self.write_post(conn, p)
+            p_url = post_data[3]
+            p_id = post_data[0]
+            temp_post = post(p_url, p_id)
+
+            print('p_id, P_url:', p_id, p_url)
+            if p_url is None or p_id is None:
+                continue
+
+            #pick comment, second earliest since earliest is often mod post
+            r = self.session.get('https://www.reddit.com' + p_url)
+            soup = BeautifulSoup(r.text,'html.parser')
+            comment_table = soup.find('div', {'class':'sitetable nestedlisting'})
+            comments = comment_table.find_all('div', {'class': re.compile("entry unvoted.*")})
+            if len(comments) < min_comments:
+                return_value = 'Not enough comments'
+                continue
+            else:
+                return_value = None
+
+            #sort by timestamp
+            comments_clean = []
+
+            for c in comments:
+                try:
+                    if len(c.find('div', {'class':'md'}).text.lower()) < comment_min_len or 'http' in c.find('div', {'class':'md'}).text.lower():
+                        continue
+                    else:
+                        comments_clean.append(comment_data(c))
+                except:
+                    pass
+            comments_clean.sort(key = operator.attrgetter('comment_timestamp'), reverse = True)
+            temp_post.comments=comments_clean
+            posts.append(temp_post)
+
+        possible_comment_list = list(conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id where posts.subreddit like ?', (subreddit,)).fetchall())
+
+        for p in posts:
+            #run dict maker only accepting sentences that share words with title and/or post
+            for c in p.comments:
+                self.sentence_dict = {}
+
+                comment_id = c.soup.find('input', {'name':'thing_id'})['value'].split('_')[1]
+                comment_permalink = None
+
+                if p.url is None or p.p_id is None:
+                    continue
+
+                sorting_structure = []
+                for r in possible_comment_list:
+                    implied_reply_score = g_comments.values_statement(split_comments(c.text), split_comments(r[2]))
+                    implied_title_score = g_title.values_statement(split_comments(c.text),split_comments(r[6]))
+
+                    if 'http' not in r[2]:
+                        sorting_structure.append((r[0], r[4], math.sqrt((implied_reply_score*implied_reply_score) + (implied_title_score*implied_title_score)), r[2]))
+
+                sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
+                current_comment = sorting_structure[0]
+
+                try:
+                    print('returning:', ('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))
+                    #put optimal number of sentences and post it as response
+                    results.append(('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))#full url, text, expected value
+                except:
+                    traceback.print_exc()
+                if len(results) >=max_results:
+                    results.sort(key=operator.itemgetter(2), reverse=True)
+                    return results
+        results.sort(key=operator.itemgetter(2), reverse=True)
+        return results
+
+    def run_strategy(self, num, subreddit, strat):
+        results = self.strategy1(subreddit, 5)
+
+        for i in results:
+            print(i)
+        return results[0:num]
+
+class response_word_graph():
+    def __init__(self):
+        self.parent_nodes = {}
+        self.child_nodes = {}
+
+    def add_item(self, parent_word, child_word, value):
+        self.child_nodes.setdefault(child_word, node(child_word)).add_value(parent_word, value)
+
+    def values_statement(self, parent_words, child_words):
+
+        child_words_value = []
+        for w in child_words:
+            temp_value = []
+            for w2 in parent_words:
+                try:
+                    temp_value.append(self.child_nodes[w].get_edge_median(w2))
+                except:
+                    #key error
+                    temp_value.append(0)
+            child_words_value.append(statistics.mean(temp_value))
+
+        return sum(child_words_value)/max(len(child_words),len(parent_words))
+
+class node():
+    def __init__(self, content):
+        self.min_length = 5
+        self.max_length = 100
+        self.content = content.lower()
+        self.edges = {}
+        self.average = 0
+        self.median = 0
+
+    def add_value(self, edge, value):
+        self.edges.setdefault(edge, []).append(value)
+        if len(self.edges[edge]) > self.max_length:
+            self.edges[edge] = self.edges[edge][-(self.max_length):]
+
+    def get_edge_value(self, in_word):
+        if in_word in self.edges.keys():
+            return self.edges[in_word]
+        return 0
+
+    def get_edge_median(self, in_word):
+        if in_word in self.edges.keys() and len(self.edges[in_word])>=self.min_length:
+            return statistics.median(self.edges[in_word])
+        return 0
+
+    def get_edge_mean(self, in_word):
+        if in_word in self.edges.keys() and len(self.edges[in_word])>=self.min_length:
+            return statistics.mean(self.edges[in_word])
+        return 0
 
 class bot:
     def __init__(self, user_name, password, bot_function):
@@ -32,19 +347,18 @@ class bot:
         self.uh = None
         self.driver = None
 
-        self.main_reader = analysis.reader(self.session)
+        self.main_reader = reader(self.session)
         self.results = []
 
         if bot_function == 0:
             self.main_reader.read_all()
         elif bot_function == 1:
-            for s in analysis.subreddits:
+            for s in subreddits:
                 self.results.extend(self.main_reader.run_strategy(1,s, 1))
                 for j in self.results:
                     print(self.results)
                     self.post_comment(j[0], j[1])
-                    time.sleep(1200)
-        #self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
+                    time.sleep(300)
 
     def write_new_data_log(self,url, text):
         parent_url = url
@@ -140,7 +454,6 @@ class bot:
                 except:
                     self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button').find_element_by_tag_name('a').click()
 
-
             time.sleep(2)
             self.driver.find_element_by_css_selector(c_id + ' > div > div.md > textarea').send_keys(text)
             time.sleep(2)
@@ -173,6 +486,27 @@ class bot:
     def buildGittins(self):
         pass
 
+def comment_similarity(c1, c2):
+    c1_word = list(re.split(r'[^a-zA-Z0-9]+',c1.lower()))
+    c2_words = list(re.split(r'[^a-zA-Z0-9]+', c2.lower()))
+
+    value1 = 0
+    for i in c1_word:
+        if i in c2_words:
+            c2_words.remove(i)
+
+    return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
+
+def split_comments(c1):
+    c1_word = list(set(list(re.split(r"[^a-zA-Z0-9']+", c1.lower()))))
+
+    res = []
+    value1 = 0
+    for i in c1_word:
+        if len(i)>2:
+            res.append(i)
+    return res
+
 def get_session():
     s = requests.Session()
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
@@ -190,7 +524,6 @@ def run_bot(bot_function):
 def main():
     global main_bot
     run_bot(0)
-
 
 if __name__ == "__main__":
     main()
