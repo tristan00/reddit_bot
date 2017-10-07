@@ -8,7 +8,6 @@ import datetime
 import statistics
 import operator
 import random
-import neural_network
 import math
 
 subreddits = ['Askreddit', 'news','the_donald','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'me_irl', 'aww', 'gifs', 'mma']
@@ -46,12 +45,11 @@ class reader():
         self.sentence_count_dict = {}
 
     def read_all(self):
-        temp = self.name
+
         for i in subreddits:
             print('reading posts in :', i)
-            self.name = i
-            self.get_post_list()
-        self.name = temp
+            subreddit = i
+            self.get_post_list(subreddit)
         self.write_posts_and_comments_to_db()
 
     def reset_subreddit(self):
@@ -87,14 +85,14 @@ class reader():
         except:
             return (None, None, None, None, None, None)
 
-    def get_post_list(self):
+    def get_post_list(self, subreddit):
         conn = sqlite3.connect('reddit.db')
         tries = 3
         while tries >0:
             time.sleep(3)
             try:
 
-                r = self.session.get('https://www.reddit.com/r/{0}/'.format(self.name))
+                r = self.session.get('https://www.reddit.com/r/{0}/'.format(subreddit))
                 soup = BeautifulSoup(r.text, "html.parser")
 
                 posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
@@ -158,6 +156,7 @@ class reader():
                         pass
                 except:
                     pass
+                    #TODO: make sure the error is always the comment_upvote part
                     #traceback.print_exc()
         except:
             traceback.print_exc()
@@ -182,11 +181,13 @@ class reader():
         #1: analyzes comment response words
         #2: analyzes title words
 
-        g = neural_network.response_word_graph()
+        g = response_word_graph()
         conn = sqlite3.connect('reddit.db')
         res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp, a.post_id from comment a join comment b on a.parent_id = b.comment_id order by a.timestamp')
 
         for r in res:
+            #print(r)
+
             if (graph_type == 1):
                 child_words = split_comments(r[3])
                 parent_words = split_comments(r[5])
@@ -204,7 +205,7 @@ class reader():
         conn.close()
         return g
 
-    def strategy1(self):
+    def strategy1(self, subreddit):
         comment_min_len = 10
         min_comments = 2
         similarity_threshold = .9
@@ -216,7 +217,7 @@ class reader():
 
         #pick post, new post with high upvotes
         conn = sqlite3.connect('reddit.db')
-        r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(self.name))
+        r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(subreddit))
         soup = BeautifulSoup(r.text,'html.parser')
         ps = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
@@ -279,7 +280,7 @@ class reader():
                     implied_reply_score = g_comments.values_statement(split_comments(c.text), split_comments(r[2]))
                     implied_title_score = g_title.values_statement(split_comments(c.text),split_comments(r[6]))
 
-                    if 'http' not in r[2] and comment_similarity(r[2], c.text)<similarity_threshold:
+                    if 'http' not in r[2]:
                         sorting_structure.append((r[0], r[4], math.sqrt((implied_reply_score*implied_reply_score) + (implied_title_score*implied_title_score)), r[2]))
 
                 sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
@@ -298,12 +299,73 @@ class reader():
         results.sort(key=operator.itemgetter(2), reverse=True)
         return results
 
-    def pick_strategy_and_sub(self, num):
-        results = self.strategy1()
+    def run_strategy(self, num, subreddit, strat):
+        results = self.strategy1(subreddit)
 
         for i in results:
             print(i)
         return results[0:num]
+
+
+class response_word_graph():
+    def __init__(self):
+        self.parent_nodes = {}
+        self.child_nodes = {}
+
+    def add_item(self, parent_word, child_word, value):
+        try:
+            pass
+            #print(parent_word, child_word, self.child_nodes[child_word].edges[parent_word])
+        except:
+            pass
+        if child_word not in self.child_nodes.keys():
+            self.child_nodes[child_word]= node(child_word)
+        if parent_word not in self.child_nodes[child_word].edges.keys():
+            self.child_nodes[child_word].edges[parent_word] = [value]
+        else:
+            self.child_nodes[child_word].edges[parent_word].append(value)
+
+        if len(self.child_nodes[child_word].edges[parent_word])>1:
+            pass
+            #print(parent_word, child_word, self.child_nodes[child_word].edges[parent_word])
+
+    def values_statement(self, parent_words, child_words):
+
+        child_words_value = []
+        for w in child_words:
+            temp_value = []
+            for w2 in parent_words:
+                try:
+                    temp_value.append(self.child_nodes[w].get_edge_mean(w2))
+                except:
+                    #key error
+                    temp_value.append(0)
+            child_words_value.append(statistics.mean(temp_value))
+
+        return sum(child_words_value)/max(len(child_words),len(parent_words))
+
+class node():
+    def __init__(self, content):
+        self.min_length = 5
+        self.content = content.lower()
+        self.edges = {}
+        self.average = 0
+        self.median = 0
+
+    def get_edge_value(self, in_word):
+        if in_word in self.edges.keys():
+            return self.edges[in_word]
+        return 0
+
+    def get_edge_median(self, in_word):
+        if in_word in self.edges.keys() and len(self.edges[in_word])>=self.min_length:
+            return statistics.median(self.edges[in_word])
+        return 0
+
+    def get_edge_mean(self, in_word):
+        if in_word in self.edges.keys() and len(self.edges[in_word])>=self.min_length:
+            return statistics.mean(self.edges[in_word])
+        return 0
 
 
 def comment_similarity(c1, c2):
@@ -318,7 +380,7 @@ def comment_similarity(c1, c2):
     return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
 
 def split_comments(c1):
-    c1_word = list(re.split(r"[^a-zA-Z0-9']+",c1.lower()))
+    c1_word = list(set(list(re.split(r"[^a-zA-Z0-9']+", c1.lower()))))
 
     res = []
     value1 = 0
