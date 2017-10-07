@@ -39,7 +39,7 @@ class bot:
             self.main_reader.read_all()
         elif bot_function == 1:
             for s in analysis.subreddits:
-                self.results.extend(self.main_reader.run_strategy(5,s, 1))
+                self.results.extend(self.main_reader.run_strategy(1,s, 1))
                 for j in self.results:
                     print(self.results)
                     self.post_comment(j[0], j[1])
@@ -127,7 +127,7 @@ class bot:
     def post_driver(self, text, parent_comment_url):
         try:
             thing_id = '#thing_t1_' + parent_comment_url.split('/')[-2]
-            print('things',parent_comment_url.split('/'))
+            #print('things',parent_comment_url.split('/'))
             c_id = '#commentreply_t1_' + parent_comment_url.split('/')[-2]
             self.driver.get(parent_comment_url)
             time.sleep(5)
@@ -184,7 +184,7 @@ def run_bot(bot_function):
     rs = conn.execute('select * from reddit_logins').fetchall()
     for r in rs:
         creds.append({'user_name':r[0], 'password':r[1]})
-    main_bot = bot(creds[0], creds[0]['user_name'], creds[0]['password'],bot_function)
+    main_bot = bot( creds[0]['user_name'], creds[0]['password'],bot_function)
     conn.close()
 
 def main():

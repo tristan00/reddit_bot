@@ -11,6 +11,8 @@ import random
 import math
 
 subreddits = ['Askreddit', 'news','the_donald','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'me_irl', 'aww', 'gifs', 'mma']
+random.shuffle(subreddits)
+
 
 class post():
     def __init__(self, url, p_id):
@@ -36,7 +38,6 @@ class comment_data():
 class reader():
     def __init__(self, session):
         self.name = ""
-        self.reset_subreddit()
         self.put_sub_to_db()
         self.session = session
         #self.write_posts_and_comments_to_db()
@@ -51,15 +52,6 @@ class reader():
             subreddit = i
             self.get_post_list(subreddit)
         self.write_posts_and_comments_to_db()
-
-    def reset_subreddit(self):
-        s_list = []
-        conn = sqlite3.connect('reddit.db', timeout=10)
-        res = conn.execute('select * from subreddit')
-        for s in res:
-            s_list.append(s[0])
-        self.name= random.choice(s_list)
-        conn.close()
 
     def put_sub_to_db(self):
         conn = sqlite3.connect('reddit.db')
@@ -205,7 +197,7 @@ class reader():
         conn.close()
         return g
 
-    def strategy1(self, subreddit):
+    def strategy1(self, subreddit, max_results):
         comment_min_len = 10
         min_comments = 2
         similarity_threshold = .9
@@ -262,7 +254,7 @@ class reader():
             temp_post.comments=comments_clean
             posts.append(temp_post)
 
-        possible_comment_list = list(conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id').fetchall())
+        possible_comment_list = list(conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id where posts.subreddit like ?', (subreddit,)).fetchall())
 
         for p in posts:
             #run dict maker only accepting sentences that share words with title and/or post
@@ -287,25 +279,23 @@ class reader():
                 current_comment = sorting_structure[0]
 
                 try:
-                    print('score: ', sorting_structure[0][1])
-                    print('post:', p.url)
-                    print('parent comment:', c.text)
-                    print('intended comment:', current_comment[3])
                     print('returning:', ('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))
                     #put optimal number of sentences and post it as response
                     results.append(('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))#full url, text, expected value
                 except:
                     traceback.print_exc()
+                if len(results) >=max_results:
+                    results.sort(key=operator.itemgetter(2), reverse=True)
+                    return results
         results.sort(key=operator.itemgetter(2), reverse=True)
         return results
 
     def run_strategy(self, num, subreddit, strat):
-        results = self.strategy1(subreddit)
+        results = self.strategy1(subreddit, 5)
 
         for i in results:
             print(i)
         return results[0:num]
-
 
 class response_word_graph():
     def __init__(self):
@@ -313,21 +303,7 @@ class response_word_graph():
         self.child_nodes = {}
 
     def add_item(self, parent_word, child_word, value):
-        try:
-            pass
-            #print(parent_word, child_word, self.child_nodes[child_word].edges[parent_word])
-        except:
-            pass
-        if child_word not in self.child_nodes.keys():
-            self.child_nodes[child_word]= node(child_word)
-        if parent_word not in self.child_nodes[child_word].edges.keys():
-            self.child_nodes[child_word].edges[parent_word] = [value]
-        else:
-            self.child_nodes[child_word].edges[parent_word].append(value)
-
-        if len(self.child_nodes[child_word].edges[parent_word])>1:
-            pass
-            #print(parent_word, child_word, self.child_nodes[child_word].edges[parent_word])
+        self.child_nodes.setdefault(child_word, node(child_word)).add_value(parent_word, value)
 
     def values_statement(self, parent_words, child_words):
 
@@ -336,7 +312,7 @@ class response_word_graph():
             temp_value = []
             for w2 in parent_words:
                 try:
-                    temp_value.append(self.child_nodes[w].get_edge_mean(w2))
+                    temp_value.append(self.child_nodes[w].get_edge_median(w2))
                 except:
                     #key error
                     temp_value.append(0)
@@ -347,10 +323,16 @@ class response_word_graph():
 class node():
     def __init__(self, content):
         self.min_length = 5
+        self.max_length = 100
         self.content = content.lower()
         self.edges = {}
         self.average = 0
         self.median = 0
+
+    def add_value(self, edge, value):
+        self.edges.setdefault(edge, []).append(value)
+        if len(self.edges[edge]) > self.max_length:
+            self.edges[edge] = self.edges[edge][-(self.max_length):]
 
     def get_edge_value(self, in_word):
         if in_word in self.edges.keys():
@@ -366,7 +348,6 @@ class node():
         if in_word in self.edges.keys() and len(self.edges[in_word])>=self.min_length:
             return statistics.mean(self.edges[in_word])
         return 0
-
 
 def comment_similarity(c1, c2):
     c1_word = list(re.split(r'[^a-zA-Z0-9]+',c1.lower()))
