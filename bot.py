@@ -18,17 +18,11 @@ import analysis
 import os
 
 main_bot = None
-creds = []
 sql_file = 'reddit_db.sqlite'
-bots = []
-
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-strategies = [1]
-
 class bot:
-    def __init__(self, bid, user_name, password):
-        self.id = bid
+    def __init__(self, user_name, password, bot_function):
         self.user = user_name
         self.password = password
         self.session = get_session()
@@ -39,15 +33,17 @@ class bot:
         self.driver = None
 
         self.main_reader = analysis.reader(self.session)
-
         self.results = []
-        #self.main_reader.read_all()
-        self.main_reader.reset_subreddit()
-        self.results.extend(self.main_reader.pick_strategy_and_sub(5))
-        for j in self.results:
-            print(self.results)
-            self.post_comment(j[0], j[1])
-            time.sleep(600)
+
+        if bot_function == 0:
+            self.main_reader.read_all()
+        elif bot_function == 1:
+            for s in analysis.subreddits:
+                self.results.extend(self.main_reader.run_strategy(5,s, 1))
+                for j in self.results:
+                    print(self.results)
+                    self.post_comment(j[0], j[1])
+                    time.sleep(1200)
         #self.post_comment('https://www.reddit.com/r/howdoesredditwork/comments/7408zb/test4/dnunezd/', 'test99')
 
     def write_new_data_log(self,url, text):
@@ -177,33 +173,24 @@ class bot:
     def buildGittins(self):
         pass
 
-def create_bots():
-    global creds
-    global main_bot
-    global bots
-
-    conn = sqlite3.connect('reddit.db')
-    rs = conn.execute('select * from reddit_logins').fetchall()
-    for r in rs:
-        print(r)
-        creds.append({'user_name':r[0], 'password':r[1]})
-    for i in creds:
-        print(i)
-        main_bot = bot(i, i['user_name'], i['password'])
-        bots.append(main_bot)
-    conn.close()
-
 def get_session():
     s = requests.Session()
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
     return s
 
+def run_bot(bot_function):
+    creds=[]
+    conn = sqlite3.connect('reddit.db')
+    rs = conn.execute('select * from reddit_logins').fetchall()
+    for r in rs:
+        creds.append({'user_name':r[0], 'password':r[1]})
+    main_bot = bot(creds[0], creds[0]['user_name'], creds[0]['password'],bot_function)
+    conn.close()
+
 def main():
     global main_bot
-    try:
-        create_bots()
-    except:
-        traceback.print_exc()
+    run_bot(0)
+
 
 if __name__ == "__main__":
     main()
