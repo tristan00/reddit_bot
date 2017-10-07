@@ -1,4 +1,9 @@
+#bug fixes, strategy1
+#find out why there are so many nulls in pids
+#find out why it jumps out of the comments.
+
 #to do:
+#generalize post reading funtionality
 #get log to update
 #switch data analysis to panda
 #add strategy picking functionalioty
@@ -19,6 +24,7 @@ import operator
 import random
 import math
 
+reddit_sleep_time = 3
 main_bot = None
 sql_file = 'reddit_db.sqlite'
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -35,15 +41,25 @@ class comment_data():
     def __init__(self, soup, p_id):
         self.soup = soup
         self.p_id = p_id
-        self.text = self.soup.find('div', {'class':'md'}).text
+
+    def read_timestamp(self):
         self.time_str = self.soup.find('time')['datetime']
         self.comment_timestamp = datetime.datetime.strptime(self.time_str,'%Y-%m-%dT%H:%M:%S+00:00').timestamp()
-        self.comment_words = split_comments(self.text)
-        self.comment_upvotes = soup.find('span',{'class':'score unvoted'})['title']
-        self.comment_id = soup.find('input', {'name':'thing_id'})['value']
 
+    def read_text(self):
+        self.text = self.soup.find('div', {'class':'md'}).text
+        self.comment_words = split_comments(self.text)
+
+    def read_upvotes(self):
+        self.comment_upvotes = self.soup.find('span',{'class':'score unvoted'})['title']
+
+    def read_all_parameters(self):
+        self.read_timestamp()
+        self.read_text()
+        self.comment_id = self.soup.find('input', {'name':'thing_id'})['value']
+        self.comment_upvotes = self.soup.find('span',{'class':'score unvoted'})['title']
         try:
-            self.parent_id = soup.find('a',{'data-event-action':'parent'})['href'].replace('#','')
+            self.parent_id = self.soup.find('a',{'data-event-action':'parent'})['href'].replace('#','')
         except:
             self.parent_id = None
 
@@ -91,17 +107,21 @@ class reader():
     def write_post(self, conn, p):
         #print(p.attrs)
         try:
-            conn.execute('insert into posts values(?,?,?,?,?,?,?)', (self.name ,p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], 0, 0) )
-            print('Inserted post:', p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
+            print('Inserting post:', p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
+            try:
+                conn.execute('insert into posts values(?,?,?,?,?,?,?)', (self.name ,p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], 0, 0) )
+            except:
+                pass
             return (p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
         except:
+            traceback.print_exc()
             return (None, None, None, None, None, None)
 
     def get_post_list(self, subreddit):
         conn = sqlite3.connect('reddit.db')
         tries = 3
         while tries >0:
-            time.sleep(3)
+            time.sleep(reddit_sleep_time)
             try:
                 r = self.session.get('https://www.reddit.com/r/{0}/'.format(subreddit))
                 soup = BeautifulSoup(r.text, "html.parser")
@@ -140,7 +160,9 @@ class reader():
         comment_list = []
         for c in comment_soup:
             try:
-                comment_data(c, p_id).toDB(conn)
+                temp_c = comment_data(c, p_id)
+                temp_c.read_all_parameters()
+                temp_c.toDB(conn)
             except:
                 pass
                 #traceback.print_exc()
@@ -148,9 +170,9 @@ class reader():
     def write_comments_to_db(self):
         conn = sqlite3.connect('reddit.db')
         res = conn.execute('select distinct data_permalink, post_id from posts order by timestamp desc')
-        #res = conn.execute('select distinct data_permalink, post_id from posts order by comment_count desc')
+        #res = conn.execute('select distinct data_permalink, post_id from posts')
         for p in res:
-            time.sleep(3)
+            time.sleep(reddit_sleep_time)
             print(p)
             self.write_comments(p[0], p[1],conn)
 
@@ -187,7 +209,7 @@ class reader():
     def strategy1(self, subreddit, max_results):
         comment_min_len = 10
         min_comments = 2
-        similarity_threshold = .9
+        posts_to_analyze = 25
         results = []
         print("Starting learning words")
         g_comments = self.build_response_graph(1)
@@ -200,18 +222,14 @@ class reader():
         soup = BeautifulSoup(r.text,'html.parser')
         ps = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
-        p_url = None
-        p_id = None
-
-        return_value= None
         posts = []
-        for p in ps:
-            post_data = self.write_post(conn, p)
+        for p in enumerate(ps[:posts_to_analyze]):
+            post_data = self.write_post(conn, p[1])
             p_url = post_data[3]
             p_id = post_data[0]
             temp_post = post(p_url, p_id)
 
-            print('p_id, P_url:', p_id, p_url)
+            print(p[0],' p_id, P_url:', p_id, p_url)
             if p_url is None or p_id is None:
                 continue
 
@@ -221,20 +239,21 @@ class reader():
             comment_table = soup.find('div', {'class':'sitetable nestedlisting'})
             comments = comment_table.find_all('div', {'class': re.compile("entry unvoted.*")})
             if len(comments) < min_comments:
-                return_value = 'Not enough comments'
                 continue
-            else:
-                return_value = None
 
-            #sort by timestamp
             comments_clean = []
-
             for c in comments:
                 try:
                     if len(c.find('div', {'class':'md'}).text.lower()) < comment_min_len or 'http' in c.find('div', {'class':'md'}).text.lower():
                         continue
                     else:
-                        comments_clean.append(comment_data(c))
+                        try:
+                            temp_c = comment_data(c, p_id)
+                            temp_c.read_timestamp()
+                            temp_c.read_text()
+                            comments_clean.append(temp_c)
+                        except:
+                            traceback.print_exc()
                 except:
                     pass
             comments_clean.sort(key = operator.attrgetter('comment_timestamp'), reverse = True)
@@ -275,11 +294,12 @@ class reader():
                     results.sort(key=operator.itemgetter(2), reverse=True)
                     return results
         results.sort(key=operator.itemgetter(2), reverse=True)
+        conn.close()
         return results
 
     def run_strategy(self, num, subreddit, strat):
         results = self.strategy1(subreddit, 5)
-
+        print(results)
         for i in results:
             print(i)
         return results[0:num]
@@ -353,12 +373,15 @@ class bot:
         if bot_function == 0:
             self.main_reader.read_all()
         elif bot_function == 1:
+            self.login_driver()
             for s in subreddits:
                 self.results.extend(self.main_reader.run_strategy(1,s, 1))
+                print('Results: ', self.results)
                 for j in self.results:
-                    print(self.results)
                     self.post_comment(j[0], j[1])
-                    time.sleep(300)
+                    time.sleep(60)
+                self.results = []
+            self.log_of_and_quit()
 
     def write_new_data_log(self,url, text):
         parent_url = url
@@ -368,23 +391,16 @@ class bot:
         conn.close()
 
     def login(self):
-        try_counter = 3
-        while try_counter >0:
-            if (self.isloggedin()):
-                return 1
-            try:
-                print(self.user, self.password)
-                #login_data = {'api_type':'json','op':'login','passwd':self.password,'user':self.user}
 
-                login_data = {'api_type':'json','op':'login','passwd':self.password,'user':"dirty_cheeser"}
-                login_url = 'https://www.reddit.com/api/login/d{0}'.format(self.user)
-                r = self.session.post(login_url, data = login_data)
-                time.sleep(1)
-            except:
-                self.session = get_session()
-                traceback.print_exc()
-                try_counter =- 1
-        return 0
+        if (self.isloggedin()):
+            return 1
+        try:
+            login_data = {'api_type':'json','op':'login','passwd':self.password,'user':self.user}
+            login_url = 'https://www.reddit.com/api/login/d{0}'.format(self.user)
+            r = self.session.post(login_url, data = login_data)
+        except:
+            self.session = get_session()
+            traceback.print_exc()
 
     def getmodhash(self):
         r = self.session.get('https://www.reddit.com/api/me.json')
@@ -418,18 +434,12 @@ class bot:
         print(post_data)
         print(r.status_code)
 
-    #temporary
     def post_comment(self, parent_url, text):
-        self.driver = webdriver.Chrome()
-        self.login_driver()
         self.post_driver(text, parent_url)
-        self.log_of_and_quit()
         self.write_new_data_log(parent_url, text)
-        #conn = sqlite3.connect('reddit.db')
-        #conn.execute('create table if not exists {0} (url TEXT, subreddit text, strat int, result int)'.format('log'))
-        #conn.execute('insert into log values (?,?,?,?)', (parent_url,,?,?))
 
     def login_driver(self):
+        self.driver = webdriver.Chrome()
         self.driver.get('https://www.reddit.com/login')
         self.driver.find_element_by_id('user_login').send_keys(self.user)
         time.sleep(.5)
@@ -518,7 +528,7 @@ def run_bot(bot_function):
     rs = conn.execute('select * from reddit_logins').fetchall()
     for r in rs:
         creds.append({'user_name':r[0], 'password':r[1]})
-    main_bot = bot( creds[0]['user_name'], creds[0]['password'],bot_function)
+    main_bot = bot(creds[0]['user_name'], creds[0]['password'],bot_function)
     conn.close()
 
 def main():
