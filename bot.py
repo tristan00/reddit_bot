@@ -28,7 +28,7 @@ reddit_sleep_time = 3
 main_bot = None
 sql_file = 'reddit_db.sqlite'
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
-subreddits = ['Askreddit', 'news','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'dankmemes', 'me_irl', 'aww', 'gifs', 'mma', 'trees']
+subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'DeepFriedMemes', 'totallynotrobots']
 random.shuffle(subreddits)
 
 class post():
@@ -48,7 +48,7 @@ class comment_data():
 
     def read_text(self):
         self.text = self.soup.find('div', {'class':'md'}).text
-        self.comment_words = split_comments(self.text)
+        self.comment_words = split_comments_into_words(self.text)
 
     def read_upvotes(self):
         self.comment_upvotes = self.soup.find('span',{'class':'score unvoted'})['title']
@@ -89,11 +89,13 @@ class reader():
         self.g_title = None
         self.g_words = None
 
-    def read_all(self):
+        self.possible_comments = {}
+
+    def read_all(self, count):
         for i in subreddits:
             print('reading posts in :', i)
             self.get_post_list(i)
-        self.write_comments_to_db()
+        self.write_comments_to_db(count)
 
     def put_sub_to_db(self):
         conn = sqlite3.connect('reddit.db')
@@ -170,11 +172,14 @@ class reader():
                 pass
                 #traceback.print_exc()
 
-    def write_comments_to_db(self):
+    def write_comments_to_db(self, count):
         conn = sqlite3.connect('reddit.db')
-        res = conn.execute('select distinct data_permalink, post_id from posts order by timestamp desc')
+        res = list(conn.execute('select distinct data_permalink, post_id from posts order by timestamp desc').fetchall())
+        random.shuffle(res)
         #res = conn.execute('select distinct data_permalink, post_id from posts')
-        for p in res:
+        if count is None:
+            count = len(res)
+        for p in res[0:count]:
             time.sleep(reddit_sleep_time)
             print(p)
             self.write_comments(p[0], p[1],conn)
@@ -188,20 +193,30 @@ class reader():
         #1: analyzes comment response words
         #2: analyzes title words
 
-        g = response_word_graph()
+        if (graph_type == 1):
+            g = response_word_graph(2)
+        elif (graph_type == 2):
+            g = response_word_graph(2)
+        elif (graph_type == 3):
+            g = response_word_graph(0)
+        else:
+            g = response_word_graph(0)
         conn = sqlite3.connect('reddit.db')
         res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp, a.post_id from comment a join comment b on a.parent_id = b.comment_id order by a.timestamp')
 
         for r in res:
             if (graph_type == 1):
-                child_words = split_comments(r[3])
-                parent_words = split_comments(r[5])
+                child_words = split_comments_into_words(r[3])
+                parent_words = split_comments_into_words(r[5])
             if (graph_type == 2):
-                child_words = split_comments(r[3])
-                parent_words = split_comments(r[7])
+                child_words = split_comments_into_words(r[3])
+                parent_words = split_comments_into_words(r[7])
             if (graph_type == 3):
                 child_words = [r[3]]
                 parent_words = [r[5]]
+            if (graph_type == 4):
+                child_words = split_comments_into_sentences(r[3])
+                parent_words = split_comments_into_sentences(r[5])
 
             for i in child_words:
                 for j in parent_words:
@@ -221,7 +236,7 @@ class reader():
     def get_new_posts_ready_to_analyze(self, conn, subreddit):
         comment_min_len = 10
         min_comments = 2
-        posts_to_analyze = 25
+        posts_to_analyze = 100
         r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(subreddit))
         soup = BeautifulSoup(r.text,'html.parser')
         ps = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
@@ -265,36 +280,37 @@ class reader():
             posts.append(temp_post)
         return posts
 
+    def get_possible_comment_list(self, subreddit, conn):
+        self.possible_comments.setdefault(subreddit,[])
+        if len(self.possible_comments[subreddit]) == 0:
+            for i in conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id where posts.subreddit like ?', (subreddit,)).fetchall():
+                self.possible_comments[subreddit].append(i)
+        return self.possible_comments[subreddit]
+
+
     def strategy2(self, subreddit, max_results):
         results = []
         conn = sqlite3.connect('reddit.db')
         posts = self.get_new_posts_ready_to_analyze(conn, subreddit)
-        possible_comment_list = list(conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id where posts.subreddit like ?', (subreddit,)).fetchall())
+        possible_comment_list = self.get_possible_comment_list(subreddit, conn)
 
         for p in posts:
             for c in p.comments:
-                self.sentence_dict = {}
-
                 comment_id = c.soup.find('input', {'name':'thing_id'})['value'].split('_')[1]
-                comment_permalink = None
-
                 if p.url is None or p.p_id is None:
                     continue
-
                 sorting_structure = []
                 for r in possible_comment_list:
-                    implied_reply_score = self.g_comments.values_statement([c.text], [r[2]])
-
+                    implied_reply_score = self.g_comments.values_statement_by_mean([c.text], [r[2]])
                     if 'http' not in r[2]:
                         sorting_structure.append((r[0], r[4], implied_reply_score*implied_reply_score, r[2]))
-
                 sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
                 current_comment = sorting_structure[0]
-
                 try:
-                    print('returning:', ('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))
-                    #put optimal number of sentences and post it as response
-                    results.append(('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))#full url, text, expected value
+                    if current_comment[2] > 0:
+                        print('returning:', ('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))
+                        #put optimal number of sentences and post it as response
+                        results.append(('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))#full url, text, expected value
                 except:
                     traceback.print_exc()
                 if len(results) >=max_results:
@@ -308,33 +324,29 @@ class reader():
         results = []
         conn = sqlite3.connect('reddit.db')
         posts = self.get_new_posts_ready_to_analyze(conn, subreddit)
-        possible_comment_list = list(conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id where posts.subreddit like ?', (subreddit,)).fetchall())
+        possible_comment_list = self.get_possible_comment_list(subreddit, conn)
 
         for p in posts:
             for c in p.comments:
-                self.sentence_dict = {}
-
                 comment_id = c.soup.find('input', {'name':'thing_id'})['value'].split('_')[1]
-                comment_permalink = None
-
                 if p.url is None or p.p_id is None:
                     continue
-
                 sorting_structure = []
                 for r in possible_comment_list:
-                    implied_reply_score = self.g_words.values_statement(split_comments(c.text), split_comments(r[2]))
-                    implied_title_score = self.g_title.values_statement(split_comments(c.text),split_comments(r[6]))
-
+                    implied_reply_score = self.g_words.values_statement_by_median(split_comments_into_words(c.text), split_comments_into_words(r[2]))
+                    implied_title_score = self.g_title.values_statement_by_median(split_comments_into_words(c.text),split_comments_into_words(r[6]))
+                    implied_sentence_score = self.g_comments.values_statement_by_median(split_comments_into_sentences(c.text),split_comments_into_sentences(r[2]))
                     if 'http' not in r[2]:
-                        sorting_structure.append((r[0], r[4], math.sqrt((implied_reply_score*implied_reply_score) + (implied_title_score*implied_title_score)), r[2]))
+                        sorting_structure.append((r[0], r[4], math.pow((implied_reply_score*implied_reply_score) + (implied_title_score*implied_title_score) + (implied_sentence_score*implied_sentence_score), 1/3), r[2]))
 
                 sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
                 current_comment = sorting_structure[0]
 
                 try:
-                    print('returning:', ('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))
-                    #put optimal number of sentences and post it as response
-                    results.append(('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))#full url, text, expected value
+                    if current_comment[2] > 0:
+                        print('returning:', ('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))
+                        #put optimal number of sentences and post it as response
+                        results.append(('https://www.reddit.com'+ p.url + comment_id, current_comment[3], current_comment[2]))#full url, text, expected value
                 except:
                     traceback.print_exc()
                 if len(results) >=max_results:
@@ -345,24 +357,43 @@ class reader():
         return results
 
     def run_strategy(self, num, subreddit, strat):
-        if(strat == 1):
-            results = self.strategy1(subreddit, max(5,num))
-        elif (strat == 2):
-            results = self.strategy2(subreddit, max(5,num))
-        print('Results:')
-        for i in results:
-            print(i)
+        results = []
+        try:
+            if(strat == 1):
+                results = self.strategy1(subreddit, 10*num)
+            elif (strat == 2):
+                results = self.strategy2(subreddit, 10*num)
+            print('Results:')
+            for i in results:
+                print(i)
+        except:
+            traceback.print_exc()
         return results[0:num]
 
 class response_word_graph():
-    def __init__(self):
+    def __init__(self, min_results_per_node):
         self.parent_nodes = {}
         self.child_nodes = {}
+        self.min_results_per_node = min_results_per_node
 
     def add_item(self, parent_word, child_word, value):
-        self.child_nodes.setdefault(child_word, node(child_word)).add_value(parent_word, value)
+        self.child_nodes.setdefault(child_word, node(child_word, self.min_results_per_node)).add_value(parent_word, value)
 
-    def values_statement(self, parent_words, child_words):
+    def values_statement_by_median(self, parent_words, child_words):
+        child_words_value = []
+        for w in child_words:
+            temp_value = []
+            for w2 in parent_words:
+                try:
+                    temp_value.append(self.child_nodes[w].get_edge_median(w2))
+                except:
+                    #key error
+                    temp_value.append(0)
+            child_words_value.append(statistics.mean(temp_value))
+
+        return sum(child_words_value)/max(len(child_words),len(parent_words))
+
+    def values_statement_by_mean(self, parent_words, child_words):
         child_words_value = []
         for w in child_words:
             temp_value = []
@@ -377,8 +408,8 @@ class response_word_graph():
         return sum(child_words_value)/max(len(child_words),len(parent_words))
 
 class node():
-    def __init__(self, content):
-        self.min_length = 5
+    def __init__(self, content, min_results_per_node):
+        self.min_length = min_results_per_node
         self.max_length = 1000
         self.content = content.lower()
         self.edges = {}
@@ -406,7 +437,7 @@ class node():
         return 0
 
 class bot:
-    def __init__(self, user_name, password, bot_function):
+    def __init__(self, user_name, password):
         self.user = user_name
         self.password = password
         self.session = get_session()
@@ -415,32 +446,27 @@ class bot:
         self.uh = None
         self.driver = None
         self.main_reader = reader(self.session)
-        self.results = []
 
-        if bot_function == 0:
-            self.main_reader.read_all()
-        elif bot_function == 1:
-            self.login_driver()
-            self.main_reader.build_graphs()
+        self.main_reader.read_all(1000)
+        self.login_driver()
+        self.main_reader.build_graphs()
 
-            s1 = random.sample(subreddits, 5)
-            s2 = random.sample(subreddits, 3)
-            for s in s1:
-                self.results.extend(self.main_reader.run_strategy(1,s, 1))
-                print('Results: ', self.results)
-                for j in self.results:
-                    self.post_comment(s, j[0], j[1], 1)
-                    time.sleep(90)
-                self.results = []
+        for s in subreddits:
+            self.results = []
+            self.results.extend(self.main_reader.run_strategy(1,s, 1))
+            print('Results: ', self.results)
+            for j in self.results:
+                self.post_comment(s, j[0], j[1], 1)
+                time.sleep(90)
+            self.results = []
+            self.results.extend(self.main_reader.run_strategy(1,s, 2))
+            print('Results: ', self.results)
+            for j in self.results:
+                self.post_comment(s, j[0], j[1], 2)
+                time.sleep(90)
 
-            for s in s2:
-                self.results.extend(self.main_reader.run_strategy(1,s, 2))
-                print('Results: ', self.results)
-                for j in self.results:
-                    self.post_comment(s, j[0], j[1], 2)
-                    time.sleep(90)
-                self.results = []
-            self.log_of_and_quit()
+
+        self.log_of_and_quit()
 
     def write_new_data_log(self,subreddit, url, text, strat):
         parent_url = url
@@ -566,8 +592,18 @@ def comment_similarity(c1, c2):
 
     return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
 
-def split_comments(c1):
-    c1_word = list(re.split(r"[^a-zA-Z0-9']+", c1.lower()))
+def split_comments_into_words(c1):
+    c1_word = list(re.split(r"[ \n]+", c1.lower()))
+
+    res = []
+    value1 = 0
+    for i in c1_word:
+        if len(i)>2:
+            res.append(i)
+    return res
+
+def split_comments_into_sentences(c1):
+    c1_word = list(re.split(r"[.!?]+", c1.lower()))
 
     res = []
     value1 = 0
@@ -581,18 +617,18 @@ def get_session():
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
     return s
 
-def run_bot(bot_function):
+def run_bot():
     creds=[]
     conn = sqlite3.connect('reddit.db')
     rs = conn.execute('select * from reddit_logins').fetchall()
     for r in rs:
         creds.append({'user_name':r[0], 'password':r[1]})
-    main_bot = bot(creds[0]['user_name'], creds[0]['password'],bot_function)
+    main_bot = bot(creds[0]['user_name'], creds[0]['password'])
     conn.close()
 
 def main():
     global main_bot
-    run_bot(1)
+    run_bot()
 
 if __name__ == "__main__":
     main()

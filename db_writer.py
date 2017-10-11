@@ -4,6 +4,8 @@ import sys
 conn = sqlite3.connect('reddit.db')
 c = conn.cursor()
 
+
+
 #conn.execute('drop table posts')
 #conn.execute('drop table comment')
 #c.execute('create table if not exists {0} (user_name text, password text)'.format('reddit_logins'))
@@ -14,9 +16,14 @@ c = conn.cursor()
 #c.execute('insert into subredit values(?)', ('funny',))
 #conn.commit()
 
-res = c.execute('select * from comment')
-print(len(list(res)))
-conn.close()
+subreddits = ['Askreddit', 'news','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'me_irl', 'aww', 'gifs', 'mma', 'trees']
+for s in subreddits:
+    c.execute('delete from comment')
+conn.commit()
+
+res = c.execute('select distinct subreddit from posts')
+print(list(res))
+#conn.close()
 
 #res = c.execute('delete from comment')
 #conn.commit()
