@@ -5,6 +5,7 @@
     <orderEntry type="jdk" jdkName="Python 3.6.3 (C:\Python36\python.exe)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="ml_testing" />
+    <orderEntry type="module" module-name="reddit_ml_test" />
   </component>
   <component name="TestRunnerService">
     <option name="PROJECT_TEST_RUNNER" value="Unittests" />

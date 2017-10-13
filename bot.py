@@ -35,7 +35,6 @@ main_reader = None
 sql_file = 'reddit_db.sqlite'
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'totallynotrobots', 'funny', 'catsstandingup', 'aww', 'pics', 'gifs', 'videos', 'gaming', 'ProgrammerHumor']
-#subreddits = ['surrealmemes']
 random.shuffle(subreddits)
 
 class post():
@@ -646,23 +645,19 @@ def post_available_comments(q):
     main_bot.write_full_log()
 
 def analyze_and_posts(main_reader):
-    #main_reader.read_all(1000)
+    main_reader.read_all(1000)
     q = multiprocessing.Queue()
     p = multiprocessing.Process(target=post_available_comments, args=(q,))
     p.start()
 
     for s in subreddits:
+        strategy = random.randint(0,1)
         results = []
         print('subreddit:', s)
         main_reader.build_graphs(s)
-        results.extend(main_reader.run_strategy(1,s, 1))
+        results.extend(main_reader.run_strategy(1,s, strategy))
         for j in results:
-            q.put((s, j[0], j[1], 2))
-        results = []
-        results.extend(main_reader.run_strategy(1,s, 2))
-        print('Results: ', results)
-        for j in results:
-            q.put((s, j[0], j[1], 2))
+            q.put((s, j[0], j[1], strategy))
         main_reader.dereference_graphs(s)
     q.put(None)
     p.join()
