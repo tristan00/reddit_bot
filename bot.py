@@ -663,8 +663,9 @@ def analyze_and_posts(main_reader):
     p.join()
 
 def main():
-    reader = run_reader()
-    analyze_and_posts(reader)
+    for i in range(5):
+        reader = run_reader()
+        analyze_and_posts(reader)
 
 if __name__ == "__main__":
     main()
