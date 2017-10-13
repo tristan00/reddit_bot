@@ -17,19 +17,29 @@ c = conn.cursor()
 #conn.commit()
 
 subreddits = ['Askreddit', 'news','politics', 'pics', 'worldnews', 'funny', 'videos','nfl', 'nba', 'todayilearned', 'me_irl', 'aww', 'gifs', 'mma', 'trees']
-for s in subreddits:
-    c.execute('delete from comment')
 conn.commit()
 
-res = c.execute('select distinct subreddit from posts')
-print(list(res))
+#res = c.execute('select distinct subreddit from posts')
+#print(list(res))
 #conn.close()
 
 #res = c.execute('delete from comment')
 #conn.commit()
-#res = c.execute("SELECT * FROM sqlite_master WHERE type='table';")
-#for i in res:
-#print(i)
+res = c.execute("SELECT * FROM sqlite_master WHERE type='table';")
+#res =conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id where posts.subreddit like ?', ('dankmemes',)).fetchall()
+
+#res = c.execute("update posts set subreddit = ? where data_permalink like ?", ('totallynotrobots', '%totallynotrobots%',))
+#conn.commit()
+
+
+
+#subreddit = ''
+#res = conn.execute("select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id").fetchall()
+res = conn.execute('select * from posts').fetchall()
+#res = conn.execute('select * from comment').fetchall()
+
+for i in res:
+    print(i)
 #sys.getsizeof(object)
 
 #a = [1,2,3]

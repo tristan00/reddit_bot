@@ -23,12 +23,13 @@ import statistics
 import operator
 import random
 import math
+from nltk.tokenize import sent_tokenize, word_tokenize
 
 reddit_sleep_time = 3
 main_bot = None
 sql_file = 'reddit_db.sqlite'
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
-subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'DeepFriedMemes', 'totallynotrobots']
+subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'totallynotrobots']
 random.shuffle(subreddits)
 
 class post():
@@ -63,16 +64,14 @@ class comment_data():
         except:
             self.parent_id = None
 
-    def toDB(self, conn):
+    def toDB(self, cursur):
         try:
-            conn.execute('insert into comment values(?,?,?,?, ?,?)', (self.p_id.split('_')[0], self.comment_id.split('_')[1], self.parent_id, self.comment_timestamp, self.text,  self.comment_upvotes))
+            cursur.execute('insert into comment values(?,?,?,?, ?,?)', (self.p_id.split('_')[0], self.comment_id.split('_')[1], self.parent_id, self.comment_timestamp, self.text,  self.comment_upvotes))
             print('inserted comment:', (self.p_id.split('_')[0], self.comment_id.split('_')[1], self.parent_id, self.comment_timestamp, self.text,  self.comment_upvotes))
-            conn.commit()
         except:
             try:
-                conn.execute('update comment set upvotes = ? where comment_id = ?', (self.comment_upvotes, self.comment_id.split('_')[1],))
+                cursur.execute('update comment set upvotes = ? where comment_id = ?', (self.comment_upvotes, self.comment_id.split('_')[1],))
                 print('updated comment:', (self.p_id.split('_')[0], self.comment_id.split('_')[1], self.parent_id, self.comment_timestamp, self.text,  self.comment_upvotes))
-                conn.commit()
             except:
                 traceback.print_exc()
 
@@ -109,12 +108,12 @@ class reader():
         conn.commit()
         conn.close()
 
-    def write_post(self, conn, p):
+    def write_post(self, conn, p, subreddit):
         #print(p.attrs)
         try:
             print('Inserting post:', p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
             try:
-                conn.execute('insert into posts values(?,?,?,?,?,?,?)', (self.name ,p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], 0, 0) )
+                conn.execute('insert into posts values(?,?,?,?,?,?,?)', (subreddit ,p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], 0, 0) )
             except:
                 pass
             return (p['data-fullname'].split('_')[1], p.find('p',{'class':'title'}).find('a').text, p['data-timestamp'], p['data-permalink'], None, None)
@@ -135,7 +134,7 @@ class reader():
 
                 print(len(posts))
                 for p in posts:
-                    self.write_post(conn, p)
+                    self.write_post(conn, p, subreddit)
                 conn.commit()
                 conn.close()
                 print('writing posts done')
@@ -160,17 +159,20 @@ class reader():
         try:
             self.update_posts(soup, conn, p_id)
         except:
+            traceback.print_exc()
             return
         comment_soup = soup.find_all('div', {'class': re.compile("entry unvoted.*")})
         comment_list = []
+        cursor = conn.cursor()
         for c in comment_soup:
             try:
                 temp_c = comment_data(c, p_id)
                 temp_c.read_all_parameters()
-                temp_c.toDB(conn)
+                temp_c.toDB(cursor)
             except:
                 pass
-                #traceback.print_exc()
+                traceback.print_exc()
+        conn.commit()
 
     def write_comments_to_db(self, count):
         conn = sqlite3.connect('reddit.db')
@@ -232,23 +234,23 @@ class reader():
         self.g_words = self.build_response_graph(1)
         self.g_title = self.build_response_graph(2)
         self.g_comments = self.build_response_graph(3)
+        self.g_sentences = self.build_response_graph(4)
 
     def get_new_posts_ready_to_analyze(self, conn, subreddit):
         comment_min_len = 10
         min_comments = 2
-        posts_to_analyze = 100
         r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(subreddit))
         soup = BeautifulSoup(r.text,'html.parser')
         ps = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
         posts = []
-        for p in enumerate(ps[:posts_to_analyze]):
-            post_data = self.write_post(conn, p[1])
+        for p in ps:
+            post_data = self.write_post(conn, p, subreddit)
             p_url = post_data[3]
             p_id = post_data[0]
             temp_post = post(p_url, p_id)
 
-            print(p[0],' p_id, P_url:', p_id, p_url)
+            print(p,' p_id, P_url:', p_id, p_url)
             if p_url is None or p_id is None:
                 continue
 
@@ -303,7 +305,7 @@ class reader():
                 for r in possible_comment_list:
                     implied_reply_score = self.g_comments.values_statement_by_mean([c.text], [r[2]])
                     if 'http' not in r[2]:
-                        sorting_structure.append((r[0], r[4], implied_reply_score*implied_reply_score, r[2]))
+                        sorting_structure.append((r[0], r[4], implied_reply_score, r[2]))
                 sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
                 current_comment = sorting_structure[0]
                 try:
@@ -335,7 +337,7 @@ class reader():
                 for r in possible_comment_list:
                     implied_reply_score = self.g_words.values_statement_by_median(split_comments_into_words(c.text), split_comments_into_words(r[2]))
                     implied_title_score = self.g_title.values_statement_by_median(split_comments_into_words(c.text),split_comments_into_words(r[6]))
-                    implied_sentence_score = self.g_comments.values_statement_by_median(split_comments_into_sentences(c.text),split_comments_into_sentences(r[2]))
+                    implied_sentence_score = self.g_sentences.values_statement_by_median(split_comments_into_sentences(c.text),split_comments_into_sentences(r[2]))
                     if 'http' not in r[2]:
                         sorting_structure.append((r[0], r[4], math.pow((implied_reply_score*implied_reply_score) + (implied_title_score*implied_title_score) + (implied_sentence_score*implied_sentence_score), 1/3), r[2]))
 
@@ -520,8 +522,14 @@ class bot:
         print(r.status_code)
 
     def post_comment(self, subreddit, parent_url, text, strat):
-        self.post_driver(text, parent_url)
-        self.write_new_data_log(subreddit, parent_url, text, strat)
+        try:
+            self.post_driver(text, parent_url)
+            self.write_new_data_log(subreddit, parent_url, text, strat)
+            return True
+        except:
+            traceback.print_exc()
+            return False
+
 
     def login_driver(self):
         self.driver = webdriver.Chrome()
@@ -593,24 +601,10 @@ def comment_similarity(c1, c2):
     return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
 
 def split_comments_into_words(c1):
-    c1_word = list(re.split(r"[ \n]+", c1.lower()))
-
-    res = []
-    value1 = 0
-    for i in c1_word:
-        if len(i)>2:
-            res.append(i)
-    return res
+    return word_tokenize(c1.lower())
 
 def split_comments_into_sentences(c1):
-    c1_word = list(re.split(r"[.!?]+", c1.lower()))
-
-    res = []
-    value1 = 0
-    for i in c1_word:
-        if len(i)>2:
-            res.append(i)
-    return res
+    return sent_tokenize(c1.lower())
 
 def get_session():
     s = requests.Session()
