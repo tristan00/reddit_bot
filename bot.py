@@ -24,12 +24,18 @@ import operator
 import random
 import math
 from nltk.tokenize import sent_tokenize, word_tokenize
+import multiprocessing
 
 reddit_sleep_time = 3
+writing_process_timeout = 300
+writing_sleep_time= 180
+
 main_bot = None
+main_reader = None
 sql_file = 'reddit_db.sqlite'
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
-subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'totallynotrobots']
+subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'totallynotrobots', 'funny', 'catsstandingup', 'aww', 'pics', 'gifs', 'videos', 'gaming', 'ProgrammerHumor']
+#subreddits = ['surrealmemes']
 random.shuffle(subreddits)
 
 class post():
@@ -75,7 +81,7 @@ class comment_data():
             except:
                 traceback.print_exc()
 
-class reader():
+class Reader():
     def __init__(self, session):
         self.name = ""
         self.put_sub_to_db()
@@ -84,9 +90,10 @@ class reader():
 
         self.word_dict = {}
         self.sentence_count_dict = {}
-        self.g_comments = None
-        self.g_title = None
-        self.g_words = None
+        self.g_comments = {}
+        self.g_title = {}
+        self.g_words = {}
+        self.g_sentences = {}
 
         self.possible_comments = {}
 
@@ -171,7 +178,7 @@ class reader():
                 temp_c.toDB(cursor)
             except:
                 pass
-                traceback.print_exc()
+                #traceback.print_exc()
         conn.commit()
 
     def write_comments_to_db(self, count):
@@ -190,7 +197,7 @@ class reader():
         conn.commit()
         conn.close()
 
-    def build_response_graph(self, graph_type):
+    def build_response_graph(self, graph_type, subreddit):
         #graph types:
         #1: analyzes comment response words
         #2: analyzes title words
@@ -204,7 +211,7 @@ class reader():
         else:
             g = response_word_graph(0)
         conn = sqlite3.connect('reddit.db')
-        res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp, a.post_id from comment a join comment b on a.parent_id = b.comment_id order by a.timestamp')
+        res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp, a.post_id from comment a join comment b on a.parent_id = b.comment_id join posts c on a.post_id like c.post_id where c.subreddit like ? order by a.timestamp', (subreddit,))
 
         for r in res:
             if (graph_type == 1):
@@ -229,17 +236,27 @@ class reader():
         conn.close()
         return g
 
-    def build_graphs(self):
+    def build_graphs(self, sub):
         print('building graphs')
-        self.g_words = self.build_response_graph(1)
-        self.g_title = self.build_response_graph(2)
-        self.g_comments = self.build_response_graph(3)
-        self.g_sentences = self.build_response_graph(4)
+        self.g_words[sub] = self.build_response_graph(1, sub)
+        self.g_title[sub] = self.build_response_graph(2, sub)
+        self.g_comments[sub] = self.build_response_graph(3, sub)
+        self.g_sentences[sub] = self.build_response_graph(4, sub)
 
-    def get_new_posts_ready_to_analyze(self, conn, subreddit):
+    def dereference_graphs(self, sub):
+        print('building graphs')
+        self.g_words.pop(sub,None)
+        self.g_title.pop(sub,None)
+        self.g_comments.pop(sub,None)
+        self.g_sentences.pop(sub,None)
+
+    def get_new_posts_ready_to_analyze(self, conn, subreddit, sorting):
         comment_min_len = 10
         min_comments = 2
-        r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(subreddit))
+        if sorting == 'top past hour':
+            r = self.session.get('https://www.reddit.com/r/{0}/top/?sort=top&t=hour'.format(subreddit))
+        elif sorting == 'new':
+            r = self.session.get('https://www.reddit.com/r/{0}/new/'.format(subreddit))
         soup = BeautifulSoup(r.text,'html.parser')
         ps = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
@@ -250,7 +267,7 @@ class reader():
             p_id = post_data[0]
             temp_post = post(p_url, p_id)
 
-            print(p,' p_id, P_url:', p_id, p_url)
+            print(' p_id, P_url:', p_id, p_url)
             if p_url is None or p_id is None:
                 continue
 
@@ -290,10 +307,10 @@ class reader():
         return self.possible_comments[subreddit]
 
 
-    def strategy2(self, subreddit, max_results):
+    def strategy2(self, subreddit, max_results, post_sorting):
         results = []
         conn = sqlite3.connect('reddit.db')
-        posts = self.get_new_posts_ready_to_analyze(conn, subreddit)
+        posts = self.get_new_posts_ready_to_analyze(conn, subreddit, post_sorting)
         possible_comment_list = self.get_possible_comment_list(subreddit, conn)
 
         for p in posts:
@@ -303,7 +320,7 @@ class reader():
                     continue
                 sorting_structure = []
                 for r in possible_comment_list:
-                    implied_reply_score = self.g_comments.values_statement_by_mean([c.text], [r[2]])
+                    implied_reply_score = self.g_comments[subreddit].values_statement_by_mean([c.text], [r[2]])
                     if 'http' not in r[2]:
                         sorting_structure.append((r[0], r[4], implied_reply_score, r[2]))
                 sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
@@ -322,10 +339,10 @@ class reader():
         conn.close()
         return results
 
-    def strategy1(self, subreddit, max_results):
+    def strategy1(self, subreddit, max_results, post_sorting):
         results = []
         conn = sqlite3.connect('reddit.db')
-        posts = self.get_new_posts_ready_to_analyze(conn, subreddit)
+        posts = self.get_new_posts_ready_to_analyze(conn, subreddit, post_sorting)
         possible_comment_list = self.get_possible_comment_list(subreddit, conn)
 
         for p in posts:
@@ -335,9 +352,9 @@ class reader():
                     continue
                 sorting_structure = []
                 for r in possible_comment_list:
-                    implied_reply_score = self.g_words.values_statement_by_median(split_comments_into_words(c.text), split_comments_into_words(r[2]))
-                    implied_title_score = self.g_title.values_statement_by_median(split_comments_into_words(c.text),split_comments_into_words(r[6]))
-                    implied_sentence_score = self.g_sentences.values_statement_by_median(split_comments_into_sentences(c.text),split_comments_into_sentences(r[2]))
+                    implied_reply_score = self.g_words[subreddit].values_statement_by_mean(split_comments_into_words(c.text), split_comments_into_words(r[2]))
+                    implied_title_score = self.g_title[subreddit].values_statement_by_mean(split_comments_into_words(c.text),split_comments_into_words(r[6]))
+                    implied_sentence_score = self.g_sentences[subreddit].values_statement_by_mean(split_comments_into_sentences(c.text),split_comments_into_sentences(r[2]))
                     if 'http' not in r[2]:
                         sorting_structure.append((r[0], r[4], math.pow((implied_reply_score*implied_reply_score) + (implied_title_score*implied_title_score) + (implied_sentence_score*implied_sentence_score), 1/3), r[2]))
 
@@ -362,9 +379,15 @@ class reader():
         results = []
         try:
             if(strat == 1):
-                results = self.strategy1(subreddit, 10*num)
+                results = self.strategy1(subreddit, 10*num, 'top past hour')
+                if len(results) == 0:
+                    time.sleep(reddit_sleep_time)
+                    results = self.strategy1(subreddit, 10*num, 'new')
             elif (strat == 2):
-                results = self.strategy2(subreddit, 10*num)
+                results = self.strategy2(subreddit, 10*num, 'top past hour')
+                if len(results) == 0:
+                    time.sleep(reddit_sleep_time)
+                    results = self.strategy1(subreddit, 10*num, 'new')
             print('Results:')
             for i in results:
                 print(i)
@@ -438,70 +461,25 @@ class node():
             return statistics.mean(self.edges[in_word])
         return 0
 
-class bot:
+class Bot:
     def __init__(self, user_name, password):
         self.user = user_name
         self.password = password
         self.session = get_session()
-        self.login()
         self.sub = None
         self.uh = None
         self.driver = None
-        self.main_reader = reader(self.session)
+        self.log = []
 
-        self.main_reader.read_all(1000)
-        self.login_driver()
-        self.main_reader.build_graphs()
-
-        for s in subreddits:
-            self.results = []
-            self.results.extend(self.main_reader.run_strategy(1,s, 1))
-            print('Results: ', self.results)
-            for j in self.results:
-                self.post_comment(s, j[0], j[1], 1)
-                time.sleep(90)
-            self.results = []
-            self.results.extend(self.main_reader.run_strategy(1,s, 2))
-            print('Results: ', self.results)
-            for j in self.results:
-                self.post_comment(s, j[0], j[1], 2)
-                time.sleep(90)
-
-
-        self.log_of_and_quit()
-
-    def write_new_data_log(self,subreddit, url, text, strat):
-        parent_url = url
+    def write_full_log(self):
         conn = sqlite3.connect('reddit.db')
-        conn.execute('create table if not exists {0} (url TEXT, parent_url text primary key, subreddit text, strat int, result int)'.format('log'))
-        conn.execute('insert into log values (?,?,?,?,?)',(None, url,subreddit, strat,None))
+        for i in self.log:
+            self.write_new_data_log(i[0],i[1],i[2], i[3], conn)
         conn.close()
 
-    def login(self):
-
-        if (self.isloggedin()):
-            return 1
-        try:
-            login_data = {'api_type':'json','op':'login','passwd':self.password,'user':self.user}
-            login_url = 'https://www.reddit.com/api/login/d{0}'.format(self.user)
-            r = self.session.post(login_url, data = login_data)
-        except:
-            self.session = get_session()
-            traceback.print_exc()
-
-    def getmodhash(self):
-        r = self.session.get('https://www.reddit.com/api/me.json')
-        j = json.loads(r.text)
-        return j['data']['modhash']
-
-    def isloggedin(self):
-        r = self.session.get('https://www.reddit.com')
-        soup = BeautifulSoup(r.text, "html.parser")
-        #self.uh = soup.find('input',{'name':'uh', 'type':'hidden'})['value']
-        if ((self.user in r.text) or ("dirty_cheeser" in r.text)):
-            return 1
-        else:
-            return 0
+    def write_new_data_log(self,subreddit, url, text, strat, conn):
+        conn.execute('create table if not exists {0} (url TEXT, parent_url text primary key, subreddit text, strat int, result int)'.format('log'))
+        conn.execute('insert into log values (?,?,?,?,?)',(None, url,subreddit, strat,None))
 
     def post(self, subreddit, text, comment_page_url, parent_comment_id):
         login_url = 'https://www.reddit.com/api/comment/'
@@ -524,12 +502,11 @@ class bot:
     def post_comment(self, subreddit, parent_url, text, strat):
         try:
             self.post_driver(text, parent_url)
-            self.write_new_data_log(subreddit, parent_url, text, strat)
+            #self.write_new_data_log(subreddit, parent_url, text, strat)
             return True
         except:
             traceback.print_exc()
             return False
-
 
     def login_driver(self):
         self.driver = webdriver.Chrome()
@@ -589,6 +566,24 @@ class bot:
     def buildGittins(self):
         pass
 
+def login(session, password, user):
+    if (isloggedin(session, user)):
+        return 1
+    try:
+        login_data = {'api_type':'json','op':'login','passwd':password,'user':user}
+        login_url = 'https://www.reddit.com/api/login/d{0}'.format(user)
+        r = session.post(login_url, data = login_data)
+    except:
+        session = get_session()
+        traceback.print_exc()
+
+def isloggedin(session, user):
+    r = session.get('https://www.reddit.com')
+    if ((user in r.text) or ("dirty_cheeser" in r.text)):
+        return 1
+    else:
+        return 0
+
 def comment_similarity(c1, c2):
     c1_word = list(re.split(r'[^a-zA-Z0-9]+',c1.lower()))
     c2_words = list(re.split(r'[^a-zA-Z0-9]+', c2.lower()))
@@ -617,12 +612,64 @@ def run_bot():
     rs = conn.execute('select * from reddit_logins').fetchall()
     for r in rs:
         creds.append({'user_name':r[0], 'password':r[1]})
-    main_bot = bot(creds[0]['user_name'], creds[0]['password'])
+    main_bot = Bot(creds[0]['user_name'], creds[0]['password'])
     conn.close()
+    return main_bot
+
+def run_reader():
+    creds=[]
+    conn = sqlite3.connect('reddit.db')
+    rs = conn.execute('select * from reddit_logins').fetchall()
+    for r in rs:
+        creds.append({'user_name':r[0], 'password':r[1]})
+    main_reader = Reader(get_session())
+    conn.close()
+    return main_reader
+
+def post_available_comments(q):
+    main_bot = run_bot()
+    main_bot.login_driver()
+    to_write_list = []
+    analysis_done = False
+    while not analysis_done or len(to_write_list) > 0:
+        while not q.empty():
+            temp = q.get()
+            if temp is None:
+                analysis_done = True
+            else:
+                to_write_list.append(temp)
+        if len(to_write_list) > 0:
+            main_bot.post_comment(to_write_list[0][0], to_write_list[0][1], to_write_list[0][2], to_write_list[0][3])
+            time.sleep(writing_sleep_time)
+            to_write_list.remove(to_write_list[0])
+    main_bot.log_of_and_quit()
+    main_bot.write_full_log()
+
+def analyze_and_posts(main_reader):
+    #main_reader.read_all(1000)
+    q = multiprocessing.Queue()
+    p = multiprocessing.Process(target=post_available_comments, args=(q,))
+    p.start()
+
+    for s in subreddits:
+        results = []
+        print('subreddit:', s)
+        main_reader.build_graphs(s)
+        results.extend(main_reader.run_strategy(1,s, 1))
+        for j in results:
+            q.put((s, j[0], j[1], 2))
+        results = []
+        results.extend(main_reader.run_strategy(1,s, 2))
+        print('Results: ', results)
+        for j in results:
+            q.put((s, j[0], j[1], 2))
+        main_reader.dereference_graphs(s)
+    q.put(None)
+    p.join()
 
 def main():
-    global main_bot
-    run_bot()
+    reader = run_reader()
+    analyze_and_posts(reader)
 
 if __name__ == "__main__":
     main()
