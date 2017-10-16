@@ -583,8 +583,15 @@ class Bot:
 
     def write_full_log(self):
         conn = sqlite3.connect('reddit.db')
-        for i in self.log:
-            self.write_new_data_log(i[0],i[1],i[2], i[3], conn)
+        random.shuffle(self.log)
+        while len(self.log) > 0:
+            try:
+                self.write_new_data_log(self.log[0][0], self.log[0][1], self.log[0][2], self.log[0][3], conn)
+                self.log.remove(self.log[0])
+            except:
+                traceback.print_exc()
+                break
+
         conn.close()
 
     def write_new_data_log(self,subreddit, url, text, strat, conn):
@@ -610,10 +617,12 @@ class Bot:
         print(post_data)
         print(r.status_code)
 
-    def post_comment(self, subreddit, parent_url, text, strat):
+    def post_comment(self, subreddit, parent_url, text, strat, conn):
         try:
             self.post_driver(text, parent_url)
-            self.write_new_data_log(subreddit, parent_url, text, strat)
+            #self.write_new_data_log(subreddit, parent_url, text, strat, conn)
+            self.log.append(subreddit, parent_url, text, strat)
+            self.write_full_log()
             return True
         except:
             traceback.print_exc()
@@ -687,7 +696,7 @@ def get_bucket(num_list, num_of_buckets, num):
 
 def get_percentile(num_list, num):
     num_list.sort()
-    return num_list.index(num)/len(num_list)
+    return (num_list.index(num) + 1)/len(num_list)
 
 def update_log(session, user, conn):
     #rs = list(conn.execute('select * from log').fetchall())
@@ -772,6 +781,36 @@ def run_reader():
     conn.close()
     return main_reader
 
+def generate_all_inputs():
+    num_of_strats = 3
+    results = []
+    for i in subreddits:
+        for j in range(1,num_of_strats):
+            results.append((i,j))
+    return results
+
+def generate_inputs(conn, num):
+    #gittins index with disocunt of .9
+    discount_rate = .9
+
+    full_upvote_list = list(conn.execute('select result from log').fetchall())
+    db_list = list(conn.execute('select subreddit, strat, count(result), sum(result) from log group by subreddit, strat').fetchall())
+    input_list = []
+
+    for i in db_list:
+        input_list.append((i[0], i[1],i[2], get_percentile(full_upvote_list, i[3])))
+
+    sorting_list = []
+    for i in input_list:
+        sorting_list.append([i[3]*(math.pow(discount_rate, i[2])), i])
+
+    sorting_list.sort(key = operator.attrgetter(0), reverse = True)
+    result_list = []
+    for i in sorting_list[0:num]:
+        result_list.append(i[1])
+    return result_list
+
+
 def post_available_comments(q):
     main_bot = run_bot()
     main_bot.login_driver()
@@ -785,9 +824,14 @@ def post_available_comments(q):
             else:
                 to_write_list.append(temp)
         if len(to_write_list) > 0:
-            main_bot.post_comment(to_write_list[0][0], to_write_list[0][1], to_write_list[0][2], to_write_list[0][3])
-            time.sleep(writing_sleep_time)
-            to_write_list.remove(to_write_list[0])
+            try:
+                conn = sqlite3.connect('reddit.db')
+                main_bot.post_comment(to_write_list[0][0], to_write_list[0][1], to_write_list[0][2], to_write_list[0][3], conn)
+                time.sleep(writing_sleep_time)
+                to_write_list.remove(to_write_list[0])
+                conn.close()
+            except:
+                traceback.print_exc()
         time.sleep(reddit_sleep_time)
     main_bot.log_of_and_quit()
     main_bot.write_full_log()
@@ -796,18 +840,22 @@ def analyze_and_posts(main_reader):
     q = multiprocessing.Queue()
     p = multiprocessing.Process(target=post_available_comments, args=(q,))
     p.start()
-    for i in range(5):
+    for i in range(10):
 
         main_reader.read_all(1000)
-        for s in subreddits:
-            strategy = random.randint(1,3)
+
+        inputs = generate_all_inputs()
+        random.sample(inputs,5)
+        for j in inputs:
+            print('inputs: ', j)
             results = []
-            print('subreddit:', s)
-            main_reader.build_graphs(s)
-            results.extend(main_reader.run_strategy(1,s, strategy))
-            for j in results:
-                q.put((s, j[0], j[1], strategy))
-            main_reader.dereference_graphs(s)
+            main_reader.build_graphs(j[0])
+            results.extend(main_reader.run_strategy(1, j[0], j[1]))
+            for k in results:
+                q.put((j[0], k[0], k[1], j[1]))
+                print('result added: ', (j[0], k[0], k[1], j[1]))
+            main_reader.dereference_graphs(j[0])
+
     q.put(None)
     p.join()
 
