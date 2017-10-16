@@ -30,6 +30,8 @@ import multiprocessing
 
 reddit_sleep_time = 3
 writing_sleep_time= 600
+discount_rate = .9
+num_of_strats = 3
 commented_list = []
 
 main_bot = None
@@ -782,33 +784,35 @@ def run_reader():
     return main_reader
 
 def generate_all_inputs():
-    num_of_strats = 3
     results = []
     for i in subreddits:
         for j in range(1,num_of_strats):
             results.append((i,j))
     return results
 
-def generate_inputs(conn, num):
-    #gittins index with disocunt of .9
-    discount_rate = .9
-
+def generate_inputs(num):
+    #gittins index with discount of .9
+    conn = sqlite3.connect('reddit.db')
     full_upvote_list = list(conn.execute('select result from log').fetchall())
     db_list = list(conn.execute('select subreddit, strat, count(result), sum(result) from log group by subreddit, strat').fetchall())
-    input_list = []
+    if len(db_list) < (len(subreddits) * num_of_strats):
+        result_list =generate_all_inputs()
+    else:
+        input_list = []
+        for i in db_list:
+            input_list.append((i[0], i[1],i[2], get_percentile(full_upvote_list, i[3])))
 
-    for i in db_list:
-        input_list.append((i[0], i[1],i[2], get_percentile(full_upvote_list, i[3])))
+        sorting_list = []
+        for i in input_list:
+            sorting_list.append([i[3]*(math.pow(discount_rate, i[2])), i])
 
-    sorting_list = []
-    for i in input_list:
-        sorting_list.append([i[3]*(math.pow(discount_rate, i[2])), i])
+        sorting_list.sort(key = operator.attrgetter(0), reverse = True)
+        result_list = []
+        for i in sorting_list:
+            result_list.append(i[1])
 
-    sorting_list.sort(key = operator.attrgetter(0), reverse = True)
-    result_list = []
-    for i in sorting_list[0:num]:
-        result_list.append(i[1])
-    return result_list
+    conn.close()
+    return result_list[0:num]
 
 
 def post_available_comments(q):
@@ -844,8 +848,8 @@ def analyze_and_posts(main_reader):
 
         main_reader.read_all(1000)
 
-        inputs = generate_all_inputs()
-        random.sample(inputs,5)
+        inputs = generate_inputs(5)
+        random.shuffle(inputs)
         for j in inputs:
             print('inputs: ', j)
             results = []

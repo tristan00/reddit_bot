@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="f8e24d84-f277-43a1-9707-eaf617e5f5fb" name="Default" comment="">
       <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../ml_testing/main.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bot.py" afterPath="$PROJECT_DIR$/bot.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../reddit_ml_test/reader.py" afterPath="$PROJECT_DIR$/../reddit_ml_test/reader.py" />
     </list>
@@ -29,12 +28,12 @@
       <file leaf-file-name="bot.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/bot.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.7150259">
-              <caret line="624" column="33" selection-start-line="624" selection-start-column="33" selection-end-line="624" selection-end-column="33" />
+            <state vertical-scroll-proportion="0.3540587">
+              <caret line="846" column="23" selection-start-line="846" selection-start-column="23" selection-end-line="846" selection-end-column="23" />
               <folding>
                 <element signature="e#247#262#0" expanded="true" />
-                <element signature="e#29631#29741#0" expanded="false" />
-                <element signature="e#29779#29783#0" expanded="false" />
+                <element signature="e#29668#29778#0" expanded="false" />
+                <element signature="e#29816#29820#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -209,7 +208,7 @@
       <recent name="C:\Users\tdelforge\Documents\GitHub\reddit_bot" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.db_writer (1)">
+  <component name="RunManager" selected="Python.bot">
     <configuration default="false" name="bot" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -456,7 +455,7 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32769555" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32769555" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
@@ -486,7 +485,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/bot.py</url>
-          <line>453</line>
+          <line>455</line>
           <option name="timeStamp" value="84" />
         </line-breakpoint>
       </breakpoints>
@@ -531,8 +530,8 @@
           <caret line="27" column="21" selection-start-line="27" selection-start-column="21" selection-end-line="27" selection-end-column="21" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -575,8 +574,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -597,8 +596,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -619,8 +618,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -641,8 +640,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -663,8 +662,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -685,8 +684,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -735,8 +734,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -778,8 +777,8 @@
           <caret line="141" column="33" selection-start-line="141" selection-start-column="33" selection-end-line="141" selection-end-column="33" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -821,8 +820,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -949,12 +948,12 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/bot.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.7150259">
-          <caret line="624" column="33" selection-start-line="624" selection-start-column="33" selection-end-line="624" selection-end-column="33" />
+        <state vertical-scroll-proportion="0.3540587">
+          <caret line="846" column="23" selection-start-line="846" selection-start-column="23" selection-end-line="846" selection-end-column="23" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#29631#29741#0" expanded="false" />
-            <element signature="e#29779#29783#0" expanded="false" />
+            <element signature="e#29668#29778#0" expanded="false" />
+            <element signature="e#29816#29820#0" expanded="false" />
           </folding>
         </state>
       </provider>
