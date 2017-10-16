@@ -3,7 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="f8e24d84-f277-43a1-9707-eaf617e5f5fb" name="Default" comment="">
       <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/../ml_testing/main.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bot.py" afterPath="$PROJECT_DIR$/bot.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/db_writer.py" afterPath="$PROJECT_DIR$/db_writer.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../reddit_ml_test/reader.py" afterPath="$PROJECT_DIR$/../reddit_ml_test/reader.py" />
     </list>
     <ignored path="reddit_bot.iws" />
@@ -28,18 +30,12 @@
       <file leaf-file-name="bot.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/bot.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.6644737">
-              <caret line="663" column="0" selection-start-line="663" selection-start-column="0" selection-end-line="663" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.0880829">
+              <caret line="282" column="24" selection-start-line="282" selection-start-column="24" selection-end-line="282" selection-end-column="24" />
               <folding>
                 <element signature="e#247#262#0" expanded="true" />
-                <element signature="e#18444#18899#0" expanded="false" />
-                <element signature="e#19207#19373#0" expanded="false" />
-                <element signature="e#19422#19510#0" expanded="false" />
-                <element signature="e#19560#19713#0" expanded="false" />
-                <element signature="e#19761#19912#0" expanded="false" />
-                <element signature="e#21645#22032#0" expanded="false" />
-                <element signature="e#24460#24570#0" expanded="false" />
-                <element signature="e#24608#24612#0" expanded="false" />
+                <element signature="e#29292#29402#0" expanded="false" />
+                <element signature="e#29440#29444#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -49,9 +45,21 @@
         <entry file="file://$PROJECT_DIR$/../reddit_ml_test/reader.py">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="302" column="0" selection-start-line="302" selection-start-column="0" selection-end-line="304" selection-end-column="33" />
+              <caret line="315" column="24" selection-start-line="315" selection-start-column="24" selection-end-line="315" selection-end-column="24" />
               <folding>
                 <element signature="e#1#16#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="db_writer.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/db_writer.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0">
+              <caret line="44" column="0" selection-start-line="44" selection-start-column="0" selection-end-line="44" selection-end-column="0" />
+              <folding>
+                <element signature="e#0#14#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -80,8 +88,8 @@
         <option value="$PROJECT_DIR$/neural_network.py" />
         <option value="$PROJECT_DIR$/analysis.py" />
         <option value="$PROJECT_DIR$/../ml_testing/main.py" />
-        <option value="$PROJECT_DIR$/db_writer.py" />
         <option value="$PROJECT_DIR$/../reddit_ml_test/reader.py" />
+        <option value="$PROJECT_DIR$/db_writer.py" />
         <option value="$PROJECT_DIR$/bot.py" />
       </list>
     </option>
@@ -117,6 +125,17 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scratches" />
+      <pane id="ProjectPane">
+        <subPane>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="reddit_bot" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+          </PATH>
+        </subPane>
+      </pane>
       <pane id="Scope">
         <subPane subId="Project Files">
           <PATH>
@@ -125,18 +144,6 @@
               <option name="myItemType" value="" />
             </PATH_ELEMENT>
             <PATH_ELEMENT USER_OBJECT="External Dependencies">
-              <option name="myItemId" value="" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT USER_OBJECT="C:">
-              <option name="myItemId" value="" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT USER_OBJECT="Users">
-              <option name="myItemId" value="" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT USER_OBJECT="tdelforge">
               <option name="myItemId" value="" />
               <option name="myItemType" value="" />
             </PATH_ELEMENT>
@@ -185,17 +192,6 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scratches" />
-      <pane id="ProjectPane">
-        <subPane>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="reddit_bot" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-          </PATH>
-        </subPane>
-      </pane>
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -228,23 +224,6 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="reddit_bot" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/bot.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <method />
-    </configuration>
-    <configuration default="false" name="db_writer" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$USER_HOME$/PycharmProjects/redditor" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="reddit_bot" />
-      <option name="SCRIPT_NAME" value="$USER_HOME$/PycharmProjects/redditor/db_writer.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
@@ -296,6 +275,23 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="ml_testing" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../ml_testing/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <method />
+    </configuration>
+    <configuration default="false" name="reader" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../reddit_ml_test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="reddit_ml_test" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../reddit_ml_test/reader.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
@@ -424,18 +420,18 @@
     </configuration>
     <list size="5">
       <item index="0" class="java.lang.String" itemvalue="Python.bot" />
-      <item index="1" class="java.lang.String" itemvalue="Python.db_writer" />
-      <item index="2" class="java.lang.String" itemvalue="Python.db_writer (1)" />
-      <item index="3" class="java.lang.String" itemvalue="Python.analysis" />
-      <item index="4" class="java.lang.String" itemvalue="Python.main" />
+      <item index="1" class="java.lang.String" itemvalue="Python.db_writer (1)" />
+      <item index="2" class="java.lang.String" itemvalue="Python.analysis" />
+      <item index="3" class="java.lang.String" itemvalue="Python.main" />
+      <item index="4" class="java.lang.String" itemvalue="Python.reader" />
     </list>
     <recent_temporary>
       <list size="5">
         <item index="0" class="java.lang.String" itemvalue="Python.bot" />
         <item index="1" class="java.lang.String" itemvalue="Python.db_writer (1)" />
-        <item index="2" class="java.lang.String" itemvalue="Python.main" />
-        <item index="3" class="java.lang.String" itemvalue="Python.analysis" />
-        <item index="4" class="java.lang.String" itemvalue="Python.db_writer" />
+        <item index="2" class="java.lang.String" itemvalue="Python.reader" />
+        <item index="3" class="java.lang.String" itemvalue="Python.main" />
+        <item index="4" class="java.lang.String" itemvalue="Python.analysis" />
       </list>
     </recent_temporary>
   </component>
@@ -461,7 +457,7 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32769555" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32769555" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
@@ -488,6 +484,13 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/bot.py</url>
+          <line>453</line>
+          <option name="timeStamp" value="84" />
+        </line-breakpoint>
+      </breakpoints>
       <breakpoints-dialog>
         <breakpoints-dialog />
       </breakpoints-dialog>
@@ -498,11 +501,21 @@
           </properties>
         </breakpoint>
       </default-breakpoints>
-      <option name="time" value="68" />
+      <option name="time" value="88" />
     </breakpoint-manager>
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/../reddit_ml_test/reader.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="314" column="19" selection-start-line="314" selection-start-column="19" selection-end-line="314" selection-end-column="19" />
+          <folding>
+            <element signature="e#1#16#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/db_writer.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -519,14 +532,8 @@
           <caret line="27" column="21" selection-start-line="27" selection-start-column="21" selection-end-line="27" selection-end-column="21" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -540,7 +547,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -570,14 +576,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -598,14 +598,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -626,14 +620,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -654,14 +642,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -682,14 +664,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -710,14 +686,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -766,14 +736,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -815,14 +779,8 @@
           <caret line="141" column="33" selection-start-line="141" selection-start-column="33" selection-end-line="141" selection-end-column="33" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -864,14 +822,8 @@
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -951,17 +903,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/db_writer.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="40" column="189" selection-start-line="40" selection-start-column="6" selection-end-line="40" selection-end-column="189" />
-          <folding>
-            <element signature="e#0#14#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -969,7 +910,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.027960526">
           <caret line="508" column="0" selection-start-line="508" selection-start-column="0" selection-end-line="508" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -977,9 +917,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#14#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -987,34 +924,37 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.05592105">
           <caret line="2" column="0" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/../reddit_ml_test/reader.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="302" column="0" selection-start-line="302" selection-start-column="0" selection-end-line="304" selection-end-column="33" />
+          <caret line="315" column="24" selection-start-line="315" selection-start-column="24" selection-end-line="315" selection-end-column="24" />
           <folding>
             <element signature="e#1#16#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/db_writer.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="44" column="0" selection-start-line="44" selection-start-column="0" selection-end-line="44" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#14#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/bot.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.6644737">
-          <caret line="663" column="0" selection-start-line="663" selection-start-column="0" selection-end-line="663" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.0880829">
+          <caret line="282" column="24" selection-start-line="282" selection-start-column="24" selection-end-line="282" selection-end-column="24" />
           <folding>
             <element signature="e#247#262#0" expanded="true" />
-            <element signature="e#18444#18899#0" expanded="false" />
-            <element signature="e#19207#19373#0" expanded="false" />
-            <element signature="e#19422#19510#0" expanded="false" />
-            <element signature="e#19560#19713#0" expanded="false" />
-            <element signature="e#19761#19912#0" expanded="false" />
-            <element signature="e#21645#22032#0" expanded="false" />
-            <element signature="e#24460#24570#0" expanded="false" />
-            <element signature="e#24608#24612#0" expanded="false" />
+            <element signature="e#29292#29402#0" expanded="false" />
+            <element signature="e#29440#29444#0" expanded="false" />
           </folding>
         </state>
       </provider>
