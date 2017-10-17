@@ -35,12 +35,14 @@ num_of_strats = 3
 commented_list = []
 commented_parent_list = []
 user_name = None
+db_lock = multiprocessing.Lock()
 
 main_bot = None
 main_reader = None
 sql_file = 'reddit_db.sqlite'
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'totallynotrobots', 'dota2', 'memes', 'youdontsurf']
+read_only_subs = ['wholesomememes', 'comedycemetery']
 random.shuffle(subreddits)
 
 class post():
@@ -87,9 +89,9 @@ class comment_data():
                 traceback.print_exc()
 
 class Reader():
-    def __init__(self, session):
+    def __init__(self, session, conn):
         self.name = ""
-        self.put_sub_to_db()
+        self.put_sub_to_db(conn)
         self.session = session
         #self.write_posts_and_comments_to_db()
 
@@ -101,7 +103,7 @@ class Reader():
         self.g_sentences = {}
 
         self.possible_comments = {}
-        self.get_log()
+        self.get_log(conn)
 
     def is_comment_valid(self, comment_text, p):
         if 'http' not in comment_text and comment_text not in commented_list:
@@ -110,20 +112,20 @@ class Reader():
                     return False
             return True
 
-    def get_log(self):
+    def get_log(self, conn):
         global commented_list
         global commented_parent_list
-        conn = sqlite3.connect('reddit.db')
+
         conn.execute('create table if not exists log (url TEXT, parent_url text primary key, subreddit text, strat int, result int, comment text)')
         res = list(conn.execute('select distinct comment, parent_url from log').fetchall())
         for i in res:
             commented_list.append(i[0])
             commented_parent_list.append(i[1])
         conn.commit()
-        conn.close()
+
 
     def read_all(self, count):
-        for i in subreddits:
+        for i in (subreddits + read_only_subs):
             print('reading posts in :', i)
             self.get_post_list(i)
         self.write_comments_to_db(int(count/2), 1)
@@ -131,32 +133,43 @@ class Reader():
 
 
     def update_log(self):
-        #rs = list(conn.execute('select * from log').fetchall())
+        db_lock.acquire()
         conn = sqlite3.connect('reddit.db')
+
+        #check profile for latest posts
         r = self.session.get('https://www.reddit.com/user/{0}/'.format(user_name))
         soup = BeautifulSoup(r.text, "html5lib")
         for c in soup.find_all('div', {'data-type':'comment'}):
             try:
                 text = c.find('div',{'class':'md'}).text
                 value = int(c.find('span',{'class':'score unvoted'})['title'])
-                perma_url = c.find('a',{'data-event-action':'permalink'})
+                perma_url = 'https://www.reddit.com' + c.find('a',{'data-event-action':'permalink'})['data-href-url']
                 conn.execute('update log set url = ?, result = ? where comment = ?', (perma_url, value, text,))
+                conn.commit()
+            except:
+                traceback.print_exc()
+        db_lock.release()
+
+        #go get all recorded posts
+        results = list(conn.execute('select url from log where url is not null').fetchall())
+        for result in results:
+            try:
+                r = self.session.get(result[0])
+                soup = BeautifulSoup(r.text, "html5lib")
+                value = soup.find('div', {'data-type':'comment'}).find('span', {'class':'score unvoted'})['title']
+                conn.execute('update log set  result = ? where url = ?', (value, result[0],))
                 conn.commit()
             except:
                 traceback.print_exc()
         conn.close()
 
-    def put_sub_to_db(self):
-        conn = sqlite3.connect('reddit.db')
-        cursor = conn.cursor()
+    def put_sub_to_db(self, conn):
 
         #TODO: create initial db creation code
-        cursor.execute('create table if not exists {0} (sub_name TEXT PRIMARY KEY)'.format('subreddit'))
-        cursor.execute('create table if not exists {0} (subreddit TEXT, post_id TEXT UNIQUE, post_title TEXT, timestamp TEXT, data_permalink TEXT, comment_count int, upvotes int)'.format('posts'))
-        cursor.execute('create table if not exists {0} (post_id TEXT, comment_id TEXT PRIMARY KEY, parent_id TEXT, timestamp TEXT, text TEXT, upvotes int)'.format('comment'))
+        conn.execute('create table if not exists {0} (sub_name TEXT PRIMARY KEY)'.format('subreddit'))
+        conn.execute('create table if not exists {0} (subreddit TEXT, post_id TEXT UNIQUE, post_title TEXT, timestamp TEXT, data_permalink TEXT, comment_count int, upvotes int)'.format('posts'))
+        conn.execute('create table if not exists {0} (post_id TEXT, comment_id TEXT PRIMARY KEY, parent_id TEXT, timestamp TEXT, text TEXT, upvotes int)'.format('comment'))
 
-        conn.commit()
-        conn.close()
 
     def write_post(self, conn, p, subreddit):
         #print(p.attrs)
@@ -172,29 +185,27 @@ class Reader():
             return (None, None, None, None, None, None)
 
     def get_post_list(self, subreddit):
+        db_lock.acquire()
         conn = sqlite3.connect('reddit.db')
-        tries = 3
-        while tries >0:
-            time.sleep(reddit_sleep_time)
-            try:
-                r = self.session.get('https://www.reddit.com/r/{0}/'.format(subreddit))
-                soup = BeautifulSoup(r.text, "html.parser")
+        time.sleep(reddit_sleep_time)
+        try:
+            r = self.session.get('https://www.reddit.com/r/{0}/'.format(subreddit))
+            soup = BeautifulSoup(r.text, "html.parser")
 
-                posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
+            posts = soup.find('div', {'id':'siteTable'}).find_all('div', {'data-whitelist-status':'all_ads'}, recursive = False)
 
-                print(len(posts))
-                for p in posts:
-                    self.write_post(conn, p, subreddit)
-                conn.commit()
-                conn.close()
-                print('writing posts done')
-                conn.close()
-                break
-            except:
-                traceback.print_exc()
-                conn.close()
-                tries -= 1
-                #fix
+            print(len(posts))
+            for p in posts:
+                self.write_post(conn, p, subreddit)
+            conn.commit()
+            conn.close()
+            print('writing posts done')
+            conn.close()
+            db_lock.release()
+        except:
+            traceback.print_exc()
+            conn.close()
+            db_lock.release()
 
     def update_posts(self, soup, conn, p_id):
         comment_count = soup.find('a',{'data-event-action':'comments'}).text.replace(',','').split(' ')[0]
@@ -225,6 +236,7 @@ class Reader():
         conn.commit()
 
     def write_comments_to_db(self, count, shuffle):
+        db_lock.acquire()
         conn = sqlite3.connect('reddit.db')
         res = list(conn.execute('select distinct data_permalink, post_id from posts order by timestamp desc').fetchall())
         if shuffle == 1:
@@ -243,6 +255,7 @@ class Reader():
         print('writing comments done')
         conn.commit()
         conn.close()
+        db_lock.release()
 
     def build_response_graph(self, graph_type, subreddit):
         #graph types:
@@ -257,6 +270,8 @@ class Reader():
             g = response_word_graph(0)
         else:
             g = response_word_graph(0)
+
+        db_lock.acquire()
         conn = sqlite3.connect('reddit.db')
         res_list = list(conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp, a.post_id from comment a join comment b on a.parent_id = b.comment_id join posts c on a.post_id like c.post_id where c.subreddit like ? order by a.timestamp', (subreddit,)).fetchall())
 
@@ -285,6 +300,7 @@ class Reader():
                     except:
                         traceback.print_exc()
         conn.close()
+        db_lock.release()
         g.calculate_all_means()
         return g
 
@@ -362,15 +378,19 @@ class Reader():
 
     def execute_strategy(self, subreddit, max_results, post_sorting, strat):
         results = []
+        db_lock.acquire()
         conn = sqlite3.connect('reddit.db')
         posts = self.get_new_posts_ready_to_analyze(conn, subreddit, post_sorting)
         possible_comment_list = self.get_possible_comment_list(subreddit, conn)
+        conn.close()
+        db_lock.release()
 
         for p in posts:
             for c in p.comments:
                 try:
                     comment_id = c.soup.find('input', {'name':'thing_id'})['value'].split('_')[1]
                 except:
+                    #TODO: add check for deleted comment
                     traceback.print_exc()
                     continue
                 if p.url is None or p.p_id is None:
@@ -411,7 +431,7 @@ class Reader():
                     results.sort(key=operator.itemgetter(2), reverse=True)
                     return results
         results.sort(key=operator.itemgetter(2), reverse=True)
-        conn.close()
+
         return results
 
 
@@ -533,20 +553,8 @@ class Bot:
         self.driver = None
         self.log = []
 
-    def write_full_log(self, conn):
-        random.shuffle(self.log)
-        while len(self.log) > 0:
-            try:
-                self.write_new_data_log(self.log[0][0], self.log[0][1], self.log[0][2], self.log[0][3], conn)
-                self.log.remove(self.log[0])
-            except:
-                self.log.remove(self.log[0])
-                raise Exception("log write failed")
-
-
     def write_new_data_log(self,subreddit, url, text, strat, conn):
         conn.execute('insert into log values (?,?,?,?,?, ?, ?)',(None, url,subreddit, strat,None, text,datetime.datetime.now().timestamp(),))
-
 
     def post(self, subreddit, text, comment_page_url, parent_comment_id):
         login_url = 'https://www.reddit.com/api/comment/'
@@ -618,16 +626,9 @@ class Bot:
             time.sleep(2)
             self.driver.find_element_by_css_selector('{0} > div > div.bottom-area > div > button.save'.format(c_id)).click()
 
-
-
-
-
     def log_of_and_quit(self):
         self.driver.find_element_by_css_selector('#header-bottom-right > form > a').click()
         self.driver.quit()
-
-    def buildGittins(self):
-        pass
 
 
 def get_bucket(num_list, num_of_buckets, num):
@@ -670,12 +671,10 @@ def comment_similarity(c1, c2):
     for i in c1_word:
         if i in c2_words:
             c2_words.remove(i)
-
     return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
 
 def split_comments_into_words(c1):
     return word_tokenize(c1.lower())
-
 
 def split_comments_into_sentences(c1):
     return sent_tokenize(c1.lower())
@@ -687,38 +686,41 @@ def get_session():
 
 def run_bot():
     creds=[]
+    db_lock.acquire()
     conn = sqlite3.connect('reddit.db')
     rs = conn.execute('select * from reddit_logins').fetchall()
     for r in rs:
         creds.append({'user_name':r[0], 'password':r[1]})
     main_bot = Bot(creds[0]['user_name'], creds[0]['password'])
     conn.close()
+    db_lock.release()
     return main_bot
 
 def run_reader():
     global user_name
     creds=[]
+    db_lock.acquire()
     conn = sqlite3.connect('reddit.db')
     rs = conn.execute('select * from reddit_logins').fetchall()
     for r in rs:
         creds.append({'user_name':r[0], 'password':r[1]})
     temp_session = get_session()
     login(temp_session, r[1], r[0], conn)
-
     user_name = r[0]
-    main_reader = Reader(temp_session)
+    main_reader = Reader(temp_session, conn)
     conn.close()
+    db_lock.release()
     return main_reader
 
 def generate_inputs( num):
     #gittins index with discount of .9
+    db_lock.acquire()
     conn = sqlite3.connect('reddit.db')
 
     full_upvote_list = list(conn.execute('select result from log where result is not null').fetchall())
     db_list = list(conn.execute('select subreddit, strat, count(result), avg(result) from log where result is not null group by subreddit, strat').fetchall())
 
     cleaned_upvote_list = [i[0] for i in full_upvote_list]
-
     result_list1 = []
     result_list2 = []
     for i in subreddits:
@@ -731,17 +733,21 @@ def generate_inputs( num):
             if not found:
                 result_list1.append((i, j))
 
-    sorting_list = [( i[3]*(math.pow(discount_rate, i[2])),i) for i in result_list2]
+    #sorting_list = [( i[3]*(math.pow(discount_rate, i[2])),i) for i in result_list2]
+    sorting_list = []
+    for i in result_list2:
+        sorting_list.append(( i[3]*(math.pow(discount_rate, i[2])),i))
+
     sorting_list.sort(key = operator.itemgetter(0), reverse = True)
     result_list2 = []
     for i in sorting_list:
         result_list2.append(i[1])
     result_list = result_list1 + result_list2
     print('full result list: ', result_list)
-    print('cutt full result list: ', result_list[0:num])
+    print('cut result list: ', result_list[0:num])
     conn.close()
+    db_lock.release()
     return result_list[0:num]
-
 
 def post_available_comments(q):
     main_bot = run_bot()
@@ -756,32 +762,38 @@ def post_available_comments(q):
             else:
                 to_write_list.append(temp)
         if len(to_write_list) > 0:
+            db_lock.acquire()
             conn = sqlite3.connect('reddit.db')
-            try:
-                main_bot.post_comment(to_write_list[0][0], to_write_list[0][1], to_write_list[0][2], to_write_list[0][3], conn)
-            except:
-                traceback.print_exc()
-
+            main_bot.post_comment(to_write_list[0][0], to_write_list[0][1], to_write_list[0][2], to_write_list[0][3], conn)
             time.sleep(writing_sleep_time)
             main_bot.driver.get('https://www.reddit.com')
             to_write_list.remove(to_write_list[0])
             conn.close()
+            db_lock.release()
         time.sleep(reddit_sleep_time)
 
     main_bot.log_of_and_quit()
-    main_bot.write_full_log()
+
+def clean_db():
+    #remove every post and comment over 10 days old for performance
+    db_lock.acquire()
+    conn = sqlite3.connect('reddit.db')
+    min_timestamp = datetime.datetime.now().timestamp() - (10*24*60*60)
+    conn.execute('delete from comment where timestamp < ?', (min_timestamp,))
+    conn.commit()
+    conn.execute('delete from posts where timestamp < ?', (min_timestamp,))
+    conn.commit()
+    conn.close()
+    db_lock.release()
 
 def analyze_and_posts(main_reader):
     q = multiprocessing.Queue()
     p = multiprocessing.Process(target=post_available_comments, args=(q,))
     p.start()
     for i in range(20):
-
         main_reader.update_log()
-
         inputs = generate_inputs(5)
-
-        main_reader.read_all(300)
+        main_reader.read_all(200)
         #random.shuffle(inputs)
         for j in inputs:
             print('inputs: ', j)
@@ -792,13 +804,11 @@ def analyze_and_posts(main_reader):
                 q.put((j[0], k[0], k[1], j[1]))
                 print('result added: ', (j[0], k[0], k[1], j[1]))
             main_reader.dereference_graphs(j[0])
-
-
-
     q.put(None)
     p.join()
 
 def main():
+    clean_db()
     reader = run_reader()
     analyze_and_posts(reader)
 
