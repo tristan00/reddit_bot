@@ -33,6 +33,7 @@ writing_sleep_time= 600
 discount_rate = .9
 num_of_strats = 3
 commented_list = []
+commented_parent_list = []
 user_name = None
 
 main_bot = None
@@ -111,11 +112,13 @@ class Reader():
 
     def get_log(self):
         global commented_list
+        global commented_parent_list
         conn = sqlite3.connect('reddit.db')
         conn.execute('create table if not exists log (url TEXT, parent_url text primary key, subreddit text, strat int, result int, comment text)')
-        res = list(conn.execute('select distinct comment from log').fetchall())
+        res = list(conn.execute('select distinct comment, parent_url from log').fetchall())
         for i in res:
             commented_list.append(i[0])
+            commented_parent_list.append(i[1])
         conn.commit()
         conn.close()
 
@@ -123,7 +126,9 @@ class Reader():
         for i in subreddits:
             print('reading posts in :', i)
             self.get_post_list(i)
-        self.write_comments_to_db(count)
+        self.write_comments_to_db(int(count/2), 1)
+        self.write_comments_to_db(int(count/2), 0)
+
 
     def update_log(self):
         #rs = list(conn.execute('select * from log').fetchall())
@@ -134,7 +139,8 @@ class Reader():
             try:
                 text = c.find('div',{'class':'md'}).text
                 value = int(c.find('span',{'class':'score unvoted'})['title'])
-                conn.execute('update log set result = ? where comment = ?', (value, text,))
+                perma_url = c.find('a',{'data-event-action':'permalink'})
+                conn.execute('update log set url = ?, result = ? where comment = ?', (perma_url, value, text,))
                 conn.commit()
             except:
                 traceback.print_exc()
@@ -218,10 +224,11 @@ class Reader():
                 #traceback.print_exc()
         conn.commit()
 
-    def write_comments_to_db(self, count):
+    def write_comments_to_db(self, count, shuffle):
         conn = sqlite3.connect('reddit.db')
         res = list(conn.execute('select distinct data_permalink, post_id from posts order by timestamp desc').fetchall())
-        random.shuffle(res)
+        if shuffle == 1:
+            random.shuffle(res)
         #res = conn.execute('select distinct data_permalink, post_id from posts')
         if count is None:
             count = len(res)
@@ -353,7 +360,7 @@ class Reader():
                 self.possible_comments[subreddit].append(i)
         return self.possible_comments[subreddit]
 
-    def exucute_strategy(self, subreddit, max_results, post_sorting, strat):
+    def execute_strategy(self, subreddit, max_results, post_sorting, strat):
         results = []
         conn = sqlite3.connect('reddit.db')
         posts = self.get_new_posts_ready_to_analyze(conn, subreddit, post_sorting)
@@ -383,11 +390,13 @@ class Reader():
 
                     elif strat == 3:
                         implied_sentence_score = self.g_sentences[subreddit].values_statement_by_mean(split_comments_into_sentences(c.text),split_comments_into_sentences(r[2]))
-                        score = implied_reply_score
+                        score = implied_sentence_score
 
                     if self.is_comment_valid(r[2], p):
                         sorting_structure.append((r[0], r[4], score, r[2]))
 
+                if len(sorting_structure) == 0:
+                    continue
                 sorting_structure.sort(key=operator.itemgetter(2), reverse=True)
                 current_comment = sorting_structure[0]
 
@@ -410,16 +419,16 @@ class Reader():
         global commented_list
         results = []
         try:
-            results.extend(self.exucute_strategy(subreddit, 10*num, 0, strat))
+            results.extend(self.execute_strategy(subreddit, 10*num, 0, strat))
             if len(results) == 0:
                 print('first filter failed, attempting wider scope')
                 time.sleep(reddit_sleep_time)
-                results.extend(self.exucute_strategy(subreddit, 10*num, 1, strat))
+                results.extend(self.execute_strategy(subreddit, 10*num, 1, strat))
 
             if len(results) == 0:
                 print('second filter failed, attempting wider scope')
                 time.sleep(reddit_sleep_time)
-                results.extend(self.exucute_strategy(subreddit, 10*num, 2, strat))
+                results.extend(self.execute_strategy(subreddit, 10*num, 2, strat))
             print('Results:')
             for i in results:
                 print(i)
@@ -531,13 +540,13 @@ class Bot:
                 self.write_new_data_log(self.log[0][0], self.log[0][1], self.log[0][2], self.log[0][3], conn)
                 self.log.remove(self.log[0])
             except:
-                traceback.print_exc()
-                break
+                self.log.remove(self.log[0])
+                raise Exception("log write failed")
+
 
     def write_new_data_log(self,subreddit, url, text, strat, conn):
-        conn.execute('create table if not exists log (url TEXT, parent_url text primary key, subreddit text, strat int, result int, comment text)')
         conn.execute('insert into log values (?,?,?,?,?, ?, ?)',(None, url,subreddit, strat,None, text,datetime.datetime.now().timestamp(),))
-        conn.commit()
+
 
     def post(self, subreddit, text, comment_page_url, parent_comment_id):
         login_url = 'https://www.reddit.com/api/comment/'
@@ -559,12 +568,13 @@ class Bot:
 
     def post_comment(self, subreddit, parent_url, text, strat, conn):
         try:
+            self.write_new_data_log(subreddit, parent_url, text, strat, conn)
             self.post_driver(text, parent_url)
+            conn.commit()
             #self.write_new_data_log(subreddit, parent_url, text, strat, conn)
-            self.log.append((subreddit, parent_url, text, strat))
-            self.write_full_log(conn)
             return True
         except:
+            conn.rollback()
             traceback.print_exc()
             return False
 
@@ -585,39 +595,32 @@ class Bot:
             c_id = '#commentreply_t1_' + parent_comment_url.split('/')[-2]
             self.driver.get(parent_comment_url)
             time.sleep(5)
-            '#thing_t1_dnuhvyu > div.entry.unvoted > ul > li.reply-button > a'
-            try:
-                self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button > a').click()
-            except:
-                try:
-                    self.driver.find_element_by_css_selector(thing_id + ' > div.entry.likes.RES-keyNav-activeElement > ul > li.reply-button > a').click()
-                except:
-                    self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button').find_element_by_tag_name('a').click()
 
+            '#thing_t1_dnuhvyu > div.entry.unvoted > ul > li.reply-button > a'
+            self.driver.find_element_by_css_selector('li.reply-button').find_element_by_tag_name('a').click()
             time.sleep(2)
-            self.driver.find_element_by_css_selector(c_id + ' > div > div.md > textarea').send_keys(text)
+            print(c_id)
+            self.driver.find_element_by_css_selector('{0} > div > div.md > textarea'.format(c_id)).send_keys(text)
+            #//*[@id="commentreply_t1_dog2uk8"]/div/div[1]/textarea
             time.sleep(2)
-            self.driver.find_element_by_css_selector(c_id + ' > div > div.bottom-area > div > button.save').click()
+            self.driver.find_element_by_css_selector('{0} > div > div.bottom-area > div > button.save'.format(c_id)).click()
+            traceback.print_exc()
         except:
             thing_id = '#thing_t1_' + parent_comment_url.split('/')[-1]
             print('things',parent_comment_url.split('/'))
             c_id = '#commentreply_t1_' + parent_comment_url.split('/')[-1]
             self.driver.get(parent_comment_url)
+            time.sleep(5)
             '#thing_t1_dnuhvyu > div.entry.unvoted > ul > li.reply-button > a'
-            try:
-                self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button > a').click()
-            except:
-                try:
-                    self.driver.find_element_by_css_selector(thing_id + ' > div.entry.likes.RES-keyNav-activeElement > ul > li.reply-button > a').click()
-                except:
-                    self.driver.find_element_by_css_selector(thing_id + ' > div.entry.unvoted > ul > li.reply-button').find_element_by_tag_name('a').click()
-
+            self.driver.find_element_by_css_selector('li.reply-button').find_element_by_tag_name('a').click()
             time.sleep(2)
-            self.driver.find_element_by_css_selector(c_id + ' > div > div.md > textarea').send_keys(text)
+            self.driver.find_element_by_css_selector('{0} > div > div.md > textarea'.format(c_id)).send_keys(text)
             time.sleep(2)
-            self.driver.find_element_by_css_selector(c_id + ' > div > div.bottom-area > div > button.save').click()
+            self.driver.find_element_by_css_selector('{0} > div > div.bottom-area > div > button.save'.format(c_id)).click()
 
-        time.sleep(2)
+
+
+
 
     def log_of_and_quit(self):
         self.driver.find_element_by_css_selector('#header-bottom-right > form > a').click()
@@ -671,16 +674,10 @@ def comment_similarity(c1, c2):
     return 1 - len(c2_words)/len(list(re.split(r'[^a-zA-Z0-9]+', c2.lower())))
 
 def split_comments_into_words(c1):
-    #stop_words =set(stopwords.words("english"))
-    #stop_words.add('.')
-    #stop_words.add(',')
-    #words =word_tokenize(c1.lower())
-    #return [w for w in words if not w in stop_words]
     return word_tokenize(c1.lower())
 
 
 def split_comments_into_sentences(c1):
-    #stop_words =set(stopwords.words("english"))
     return sent_tokenize(c1.lower())
 
 def get_session():
@@ -713,39 +710,37 @@ def run_reader():
     conn.close()
     return main_reader
 
-def generate_all_inputs():
-    results = []
-    for i in subreddits:
-        for j in range(1,num_of_strats):
-            results.append((i,j))
-    return results
-
 def generate_inputs( num):
     #gittins index with discount of .9
     conn = sqlite3.connect('reddit.db')
 
-    full_upvote_list = list(conn.execute('select result from log').fetchall())
-    db_list = list(conn.execute('select subreddit, strat, count(result), avg(result) from log group by subreddit, strat').fetchall())
-    if len(db_list) < (len(subreddits) * num_of_strats):
-        result_list =generate_all_inputs()
-        random.shuffle(result_list)
-        result_list = result_list[0:num]
-    else:
-        input_list = []
-        for i in db_list:
-            input_list.append((i[0], i[1],i[2], get_percentile(full_upvote_list, i[3])))
+    full_upvote_list = list(conn.execute('select result from log where result is not null').fetchall())
+    db_list = list(conn.execute('select subreddit, strat, count(result), avg(result) from log where result is not null group by subreddit, strat').fetchall())
 
-        sorting_list = []
-        for i in input_list:
-            sorting_list.append([i[3]*(math.pow(discount_rate, i[2])), i])
+    cleaned_upvote_list = [i[0] for i in full_upvote_list]
 
-        sorting_list.sort(key = operator.attrgetter(0), reverse = True)
-        result_list = []
-        for i in sorting_list[0:num]:
-            result_list.append(i[1])
+    result_list1 = []
+    result_list2 = []
+    for i in subreddits:
+        for j in range(1,num_of_strats + 1):
+            found = False
+            for k in db_list:
+                if i == k[0] and j == k[1]:
+                    found = True
+                    result_list2.append((k[0], k[1],k[2], get_percentile(cleaned_upvote_list, k[3])))
+            if not found:
+                result_list1.append((i, j))
 
+    sorting_list = [( i[3]*(math.pow(discount_rate, i[2])),i) for i in result_list2]
+    sorting_list.sort(key = operator.itemgetter(0), reverse = True)
+    result_list2 = []
+    for i in sorting_list:
+        result_list2.append(i[1])
+    result_list = result_list1 + result_list2
+    print('full result list: ', result_list)
+    print('cutt full result list: ', result_list[0:num])
     conn.close()
-    return result_list
+    return result_list[0:num]
 
 
 def post_available_comments(q):
@@ -761,15 +756,18 @@ def post_available_comments(q):
             else:
                 to_write_list.append(temp)
         if len(to_write_list) > 0:
+            conn = sqlite3.connect('reddit.db')
             try:
-                conn = sqlite3.connect('reddit.db')
                 main_bot.post_comment(to_write_list[0][0], to_write_list[0][1], to_write_list[0][2], to_write_list[0][3], conn)
-                time.sleep(writing_sleep_time)
-                to_write_list.remove(to_write_list[0])
-                conn.close()
             except:
                 traceback.print_exc()
+
+            time.sleep(writing_sleep_time)
+            main_bot.driver.get('https://www.reddit.com')
+            to_write_list.remove(to_write_list[0])
+            conn.close()
         time.sleep(reddit_sleep_time)
+
     main_bot.log_of_and_quit()
     main_bot.write_full_log()
 
@@ -777,13 +775,14 @@ def analyze_and_posts(main_reader):
     q = multiprocessing.Queue()
     p = multiprocessing.Process(target=post_available_comments, args=(q,))
     p.start()
-    for i in range(3):
+    for i in range(20):
 
-        #main_reader.read_all(100)
         main_reader.update_log()
 
-        inputs = generate_inputs(len(subreddits) * num_of_strats)
-        random.shuffle(inputs)
+        inputs = generate_inputs(5)
+
+        main_reader.read_all(300)
+        #random.shuffle(inputs)
         for j in inputs:
             print('inputs: ', j)
             results = []
@@ -793,7 +792,8 @@ def analyze_and_posts(main_reader):
                 q.put((j[0], k[0], k[1], j[1]))
                 print('result added: ', (j[0], k[0], k[1], j[1]))
             main_reader.dereference_graphs(j[0])
-        main_reader.read_all(1000)
+
+
 
     q.put(None)
     p.join()
