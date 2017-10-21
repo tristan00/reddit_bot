@@ -1,5 +1,7 @@
 import sqlite3
 import sys
+import datetime
+import time
 
 conn = sqlite3.connect('reddit.db')
 c = conn.cursor()
@@ -27,24 +29,31 @@ c = conn.cursor()
 #conn.commit()
 
 #conn.commit()
-#res = c.execute("SELECT * FROM sqlite_master WHERE type='table';")
+res = c.execute("SELECT * FROM sqlite_master WHERE type='table';")
+#res = c.execute("SELECT * FROM comment;")
 #res =conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id where posts.subreddit like ?', ('dankmemes',)).fetchall()
 
 #res = c.execute("update posts set subreddit = ? where data_permalink like ?", ('totallynotrobots', '%totallynotrobots%',))
 #conn.commit()
-
-#res = c.execute("create table log (url TEXT, parent_url text primary key, subreddit text, strat int, result int, comment text)")
+#c.execute('drop table log')
+#res = c.execute("CREATE TABLE log (url TEXT, parent_url text primary key, subreddit text, strat int, result int, comment text, timestamp int)")
 #conn.commit()
 
 #subreddit = ''
 #res = conn.execute("select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id").fetchall()
-res = conn.execute('select * from log').fetchall()
+#res = conn.execute('select * from log order by result').fetchall()
+#res = list(conn.execute('select subreddit, strat, count(result), avg(result) from log where result is not null group by subreddit, strat').fetchall())
+#res = conn.execute('delete from log where result is null').fetchall()
+#conn.commit()
+
 #res = conn.execute('select * from comment').fetchall()
 #subreddit = 'dankmemes'
 #res = conn.execute('select distinct a.comment_id, a.parent_id, a.post_id, a.text, a.upvotes, b.text, a.timestamp, a.post_id from comment a join comment b on a.parent_id = b.comment_id join posts c on a.post_id like c.post_id where c.subreddit like ? order by a.timestamp', (subreddit,))
 
 for i in res:
     print(i)
+
+
 #sys.getsizeof(object)
 
 #a = [1,2,3]

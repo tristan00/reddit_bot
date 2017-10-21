@@ -30,7 +30,7 @@ import multiprocessing
 
 reddit_sleep_time = 3
 writing_sleep_time= 600
-discount_rate = .9
+discount_rate = .8
 num_of_strats = 3
 commented_list = []
 commented_parent_list = []
@@ -41,8 +41,8 @@ main_bot = None
 main_reader = None
 sql_file = 'reddit_db.sqlite'
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
-subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'totallynotrobots', 'dota2', 'memes', 'youdontsurf']
-read_only_subs = ['wholesomememes', 'comedycemetery']
+subreddits = ['dankmemes', 'me_irl', 'surrealmemes', 'totallynotrobots', 'dota2', 'memes', 'youdontsurf', 'wholesomememes', 'comedycemetery', 'jokes', 'cringepics', 'insanepeoplefacebook', 'politics']
+read_only_subs = []
 random.shuffle(subreddits)
 
 class post():
@@ -55,6 +55,7 @@ class comment_data():
     def __init__(self, soup, p_id):
         self.soup = soup
         self.p_id = p_id
+        self.parent_url = None
 
     def read_timestamp(self):
         self.time_str = self.soup.find('time')['datetime']
@@ -106,7 +107,8 @@ class Reader():
         self.get_log(conn)
 
     def is_comment_valid(self, comment_text, p):
-        if 'http' not in comment_text and comment_text not in commented_list:
+        #TODO: comment/fix this method
+        if 'http' not in comment_text and comment_text not in commented_list and 'AutoBotDetection' not in comment_text:
             for i in p.comments:
                 if comment_text in i.text:
                     return False
@@ -120,7 +122,8 @@ class Reader():
         res = list(conn.execute('select distinct comment, parent_url from log').fetchall())
         for i in res:
             commented_list.append(i[0])
-            commented_parent_list.append(i[1])
+            if (i[1] is not None):
+                commented_parent_list.append(i[1])
         conn.commit()
 
 
@@ -263,13 +266,13 @@ class Reader():
         #2: analyzes title words
 
         if (graph_type == 1):
-            g = response_word_graph(2)
+            g = response_word_graph(5)
         elif (graph_type == 2):
-            g = response_word_graph(2)
+            g = response_word_graph(3)
         elif (graph_type == 3):
-            g = response_word_graph(0)
+            g = response_word_graph(3)
         else:
-            g = response_word_graph(0)
+            g = response_word_graph(3)
 
         db_lock.acquire()
         conn = sqlite3.connect('reddit.db')
@@ -388,6 +391,8 @@ class Reader():
         for p in posts:
             for c in p.comments:
                 try:
+                    if 'deleted' in  c.soup.find('input', {'name':'thing_id'})['value']:
+                        continue
                     comment_id = c.soup.find('input', {'name':'thing_id'})['value'].split('_')[1]
                 except:
                     #TODO: add check for deleted comment
@@ -439,16 +444,16 @@ class Reader():
         global commented_list
         results = []
         try:
-            results.extend(self.execute_strategy(subreddit, 10*num, 0, strat))
+            results.extend(self.execute_strategy(subreddit, 5*num, 0, strat))
             if len(results) == 0:
                 print('first filter failed, attempting wider scope')
                 time.sleep(reddit_sleep_time)
-                results.extend(self.execute_strategy(subreddit, 10*num, 1, strat))
+                results.extend(self.execute_strategy(subreddit, 5*num, 1, strat))
 
             if len(results) == 0:
                 print('second filter failed, attempting wider scope')
                 time.sleep(reddit_sleep_time)
-                results.extend(self.execute_strategy(subreddit, 10*num, 2, strat))
+                results.extend(self.execute_strategy(subreddit, 5*num, 2, strat))
             print('Results:')
             for i in results:
                 print(i)
@@ -732,6 +737,7 @@ def generate_inputs( num):
                     result_list2.append((k[0], k[1],k[2], get_percentile(cleaned_upvote_list, k[3])))
             if not found:
                 result_list1.append((i, j))
+    random.shuffle(result_list1)
 
     #sorting_list = [( i[3]*(math.pow(discount_rate, i[2])),i) for i in result_list2]
     sorting_list = []
@@ -764,10 +770,10 @@ def post_available_comments(q):
         if len(to_write_list) > 0:
             db_lock.acquire()
             conn = sqlite3.connect('reddit.db')
-            main_bot.post_comment(to_write_list[0][0], to_write_list[0][1], to_write_list[0][2], to_write_list[0][3], conn)
-            time.sleep(writing_sleep_time)
-            main_bot.driver.get('https://www.reddit.com')
+            if main_bot.post_comment(to_write_list[0][0], to_write_list[0][1], to_write_list[0][2], to_write_list[0][3], conn):
+                time.sleep(writing_sleep_time)
             to_write_list.remove(to_write_list[0])
+            main_bot.driver.get('https://www.reddit.com')
             conn.close()
             db_lock.release()
         time.sleep(reddit_sleep_time)
@@ -775,10 +781,10 @@ def post_available_comments(q):
     main_bot.log_of_and_quit()
 
 def clean_db():
-    #remove every post and comment over 10 days old for performance
+    #remove every post and comment over 30 days old for performance
     db_lock.acquire()
     conn = sqlite3.connect('reddit.db')
-    min_timestamp = datetime.datetime.now().timestamp() - (10*24*60*60)
+    min_timestamp = datetime.datetime.now().timestamp() - (30*24*60*60)
     conn.execute('delete from comment where timestamp < ?', (min_timestamp,))
     conn.commit()
     conn.execute('delete from posts where timestamp < ?', (min_timestamp,))
@@ -792,14 +798,15 @@ def analyze_and_posts(main_reader):
     p.start()
     for i in range(20):
         main_reader.update_log()
-        inputs = generate_inputs(5)
-        main_reader.read_all(200)
-        #random.shuffle(inputs)
+        inputs = generate_inputs(10)
+        main_reader.read_all(2000)
+        break
+        random.shuffle(inputs)
         for j in inputs:
             print('inputs: ', j)
             results = []
             main_reader.build_graphs(j[0])
-            results.extend(main_reader.run_strategy(1, j[0], j[1]))
+            results.extend(main_reader.run_strategy(3, j[0], j[1]))
             for k in results:
                 q.put((j[0], k[0], k[1], j[1]))
                 print('result added: ', (j[0], k[0], k[1], j[1]))
