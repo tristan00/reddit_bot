@@ -1,15 +1,5 @@
-#bug fixes, strategy1
-#find out why there are so many nulls in pids
-#find out why it jumps out of the comments.
-
-#to do:
-#generalize post reading funtionality
-#get log to update
-#switch data analysis to panda
-#add strategy picking functionalioty
 
 import requests
-import json
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import os
@@ -799,7 +789,7 @@ def analyze_and_posts(main_reader):
     for i in range(20):
         main_reader.update_log()
         inputs = generate_inputs(10)
-        main_reader.read_all(2000)
+        main_reader.read_all(5000)
         break
         random.shuffle(inputs)
         for j in inputs:
@@ -815,7 +805,7 @@ def analyze_and_posts(main_reader):
     p.join()
 
 def main():
-    clean_db()
+    #clean_db()
     reader = run_reader()
     analyze_and_posts(reader)
 
