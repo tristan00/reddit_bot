@@ -6,12 +6,14 @@ import time
 conn = sqlite3.connect('reddit.db')
 c = conn.cursor()
 
+#c.execute('drop table sentiment_movie_data')
+#c.execute('create table if not exists model_word_mapping (model text unique, word text, rank int, marker int)')
+#conn.commit()
 
 
 #conn.execute('drop table posts')
 #conn.execute('drop table comment')
 #c.execute('create table if not exists {0} (user_name text, password text)'.format('reddit_logins'))
-#c.execute('insert into reddit_logins values(?,?)', ('dataphobes', 'SVUhgJCTZrPBeN2U'))
 #c.execute('create table if not exists {0} (sub_name TEXT PRIMARY KEY)'.format('subreddit'))
 #c.execute('insert into subreddit values(?)', ('aww',))
 #c.execute('insert into subreddit values(?)', ('worldnews',))
@@ -30,6 +32,9 @@ c = conn.cursor()
 
 #conn.commit()
 res = c.execute("SELECT * FROM sqlite_master WHERE type='table';")
+inputs = list(conn.execute('select c1.text, c1.upvotes, c2.text, c2.upvotes, p.subreddit, p.post_title, p.timestamp, c1.timestamp, c2.timestamp '
+                           'from comment c1 join comment c2 on c1.comment_id = c2.parent_id  join posts p on c1.post_id = p.post_id '
+                           'where c1.upvotes is not null and c2.upvotes is not null').fetchall())
 #res = c.execute("SELECT * FROM comment;")
 #res =conn.execute('select distinct comment.comment_id, comment.post_id, comment.text, comment.upvotes, posts.data_permalink, posts.data_permalink, posts.post_title from posts join comment on posts.post_id = comment.post_id where posts.subreddit like ?', ('dankmemes',)).fetchall()
 

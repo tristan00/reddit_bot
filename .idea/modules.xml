@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../blog/.idea/blog.iml" filepath="$PROJECT_DIR$/../blog/.idea/blog.iml" />
       <module fileurl="file://$PROJECT_DIR$/../ml_testing/.idea/ml_testing.iml" filepath="$PROJECT_DIR$/../ml_testing/.idea/ml_testing.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/reddit_bot.iml" filepath="$PROJECT_DIR$/.idea/reddit_bot.iml" />
       <module fileurl="file://$PROJECT_DIR$/../reddit_ml_test/.idea/reddit_ml_test.iml" filepath="$PROJECT_DIR$/../reddit_ml_test/.idea/reddit_ml_test.iml" />
